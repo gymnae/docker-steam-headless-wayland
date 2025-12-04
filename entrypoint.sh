@@ -57,11 +57,15 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 
 # --- 6. Gamescope ---
 echo "Starting Gamescope..."
+
+# FIX: Disable EI (Input Emulation) to prevent crashes
+# We also add --headless explicitly to be safe, though embedded usually implies it.
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
     -r 60 \
     -F fsr \
+    --disable-xwayland-ei \
     --force-grab-cursor \
     -- \
     steam -gamepadui -tenfoot &
