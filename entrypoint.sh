@@ -72,7 +72,7 @@ if [ -z "$FOUND_SOCKET" ]; then echo "Error: Wayland socket missing"; exit 1; fi
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 
-# ALLOW ROOT ACCESS TO SOCKET (Crucial for Input)
+# ALLOW ROOT ACCESS TO SOCKET
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
 # --- 7. Start Sunshine (ROOT MODE) ---
@@ -80,35 +80,38 @@ echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# ALLOW ROOT ACCESS TO PULSEAUDIO (Crucial for Sound)
-# We copy the steam user's cookie to root so root can talk to the audio server
+# Copy PulseAudio cookie for Root access
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
     cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
 fi
 
-# Launch Sunshine as ROOT
-# This grants instant access to /dev/uinput without permission errors.
-# We point it to the steam user's Audio and Video sockets.
-export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
-export XDG_SEAT=seat0 
+# --- WATCHDOG: FIX INPUT & AUDIO ---
 (
     while true; do
-        # 1. Force permissions
+        # 1. FORCE UDEV TRIGGER (This fixes empty libinput list!)
+        # Tells the kernel to announce the devices again so userspace sees them.
+        udevadm trigger --action=change --subsystem-match=input
+        
+        # 2. Force permissions on devices
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         
-        # 2. FORCE NOTIFICATION (The Fix for Empty List)
-        # This tells the OS "Hey, check your input devices again!"
-        udevadm trigger --action=add --subsystem-match=input
+        # 3. Keep-Alive for Audio
+        # If WirePlumber dies (common in headless), restart it
+        if ! pgrep -u steam wireplumber > /dev/null; then
+            echo "Restarting WirePlumber..."
+            su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
+        fi
         
         sleep 5
     done
 ) &
 
-
+# Launch Sunshine
+export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
+export XDG_SEAT=seat0 
 sunshine &
-
 
 # --- 8. Keep Alive ---
 wait $GS_PID
