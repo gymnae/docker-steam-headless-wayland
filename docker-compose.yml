@@ -1,0 +1,17 @@
+services:
+  steam-headless-wayland:
+    build: .
+    network_mode: host # Required for Steam/Sunshine local discovery
+    privileged: true    # Required to take DRM Master of the dummy plug
+    ipc: host           # Performance
+    volumes:
+      - ./steam-data:/home/steam/.local/share/Steam
+      - ./sunshine-conf:/home/steam/.config/sunshine
+      - /run/udev:/run/udev:ro
+    devices:
+      - /dev/dri:/dev/dri  # The Dummy Plug lives here!
+      - /dev/input:/dev/input # Gamepads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - XDG_RUNTIME_DIR=/run/user/1000
