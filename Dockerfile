@@ -48,7 +48,8 @@ RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-USER steam
+# CHANGE: Stay as root so entrypoint can fix permissions
+USER root
 WORKDIR /home/steam
 ENV PROTON_LOG=1
 
