@@ -109,6 +109,20 @@ ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
 export XDG_SEAT=seat0 
 
+# --- 7.5. INPUT PERMISSION WATCHDOG ---
+# Sunshine creates /dev/input/event* nodes as ROOT when you connect.
+# We must ensure the 'steam' user can read/write them immediately.
+echo "Starting Input Watchdog..."
+(
+    while true; do
+        # Force all event devices to be world R/W
+        # This covers new devices created by Sunshine
+        chmod 666 /dev/input/event* 2>/dev/null
+        chmod 666 /dev/input/js* 2>/dev/null
+        sleep 2
+    done
+) &
+
 # Run directly (no su)
 sunshine &
 
