@@ -3,17 +3,26 @@ set -e
 
 # --- 1. Fix Permissions ---
 echo "Fixing permissions..."
-# Config Dirs
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config
 chown -R steam:steam /home/steam/.steam
 chown -R steam:steam /home/steam/.local
 
 # GPU & Input Access
-# Grant global R/W access to bypass container GID mismatch issues
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
+
+# --- 1.5. FAKE TTY (Crucial for seatd) ---
+# seatd needs a VT to manage. We create fake TTY nodes to satisfy it.
+if [ ! -e /dev/tty0 ]; then
+    mknod /dev/tty0 c 4 0
+    chmod 666 /dev/tty0
+fi
+if [ ! -e /dev/tty1 ]; then
+    mknod /dev/tty1 c 4 1
+    chmod 666 /dev/tty1
+fi
 
 # --- 2. Setup Runtime & DBus ---
 export XDG_RUNTIME_DIR=/run/user/1000
@@ -32,9 +41,9 @@ eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
-# --- 3. Start Seat Daemon (FIXED) ---
-# Removed '-n' which was causing the crash.
-# -g video: Allows users in the 'video' group (steam) to connect.
+# --- 3. Start Seat Daemon ---
+# -g video: Allow video group (steam) to connect
+# We do NOT use -n (socket activation) as it caused errors previously
 echo "Starting seatd..."
 seatd -g video &
 export LIBSEAT_BACKEND=seatd
@@ -47,7 +56,8 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 
 # --- 5. Start Gamescope (Backgrounded) ---
 echo "Starting Gamescope..."
-# We run in background so we can wait for the display socket
+# We run as 'steam' but keep our environment variables
+# HOME=/home/steam prevents the "Permission denied /root/..." error
 sudo -E -u steam HOME=/home/steam gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
@@ -57,10 +67,9 @@ sudo -E -u steam HOME=/home/steam gamescope \
     -- \
     steam -gamepadui -tenfoot &
 
-# Capture Gamescope PID
 GS_PID=$!
 
-# --- 6. Wait for Wayland Socket (Race Condition Fix) ---
+# --- 6. Wait for Wayland Socket ---
 echo "Waiting for Wayland socket..."
 TIMEOUT=30
 while [ ! -S "$XDG_RUNTIME_DIR/wayland-0" ] && [ ! -S "$XDG_RUNTIME_DIR/wayland-1" ]; do
@@ -72,7 +81,7 @@ while [ ! -S "$XDG_RUNTIME_DIR/wayland-0" ] && [ ! -S "$XDG_RUNTIME_DIR/wayland-
     ((TIMEOUT--))
 done
 
-# Detect which socket was created
+# Detect socket
 if [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
     export WAYLAND_DISPLAY=wayland-0
 else
@@ -82,7 +91,6 @@ echo "Wayland socket found: $WAYLAND_DISPLAY"
 
 # --- 7. Start Sunshine ---
 echo "Starting Sunshine..."
-# Now that WAYLAND_DISPLAY exists, Sunshine will connect successfully
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export WAYLAND_DISPLAY=$WAYLAND_DISPLAY && sunshine" &
 
 # --- 8. Keep Container Alive ---
