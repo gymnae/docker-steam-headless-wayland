@@ -1,24 +1,27 @@
 FROM archlinux:latest
 
-# 1. Initialize Arch, Multilib, and Chaotic-AUR
-# We install the Chaotic-AUR keyring and mirrorlist so we can pull 'sunshine' as a binary.
+# 1. Setup Arch Keyring, Multilib, and Chaotic-AUR (ALL IN ONE STEP)
+# We must install the Chaotic keys and add the repo BEFORE installing sunshine/proton
 RUN echo "[multilib]" >> /etc/pacman.conf && \
     echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf && \
     pacman-key --init && \
     pacman-key --populate archlinux && \
+    # Install common build tools first (needed for key signing sometimes)
     pacman -Syu --noconfirm --needed base-devel git sudo && \
-    # Install Chaotic-AUR Keyring
+    # Recv Chaotic-AUR Key (Use keyserver if the direct recv fails)
     pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com && \
     pacman-key --lsign-key 3056513887B78AEB && \
+    # Install the Keyring and Mirrorlist packages directly
     pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
                           'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' && \
-    # Add Chaotic-AUR to pacman.conf
+    # Enable the repo in pacman.conf
     echo "[chaotic-aur]" >> /etc/pacman.conf && \
     echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf && \
-    # Update database to see the new repo
+    # Update databases again so pacman sees the new packages
     pacman -Syu --noconfirm
 
-# 2. Install Wayland, Gamescope, and Drivers
+# 2. Install Wayland, Gamescope, Sunshine, and Proton-GE
+# NOW these packages will be found!
 RUN pacman -S --noconfirm \
     gamescope \
     xorg-xwayland \
@@ -26,6 +29,8 @@ RUN pacman -S --noconfirm \
     lib32-nvidia-utils \
     steam \
     sunshine \
+    proton-ge-custom \
+    protontricks \
     ttf-liberation \
     pipewire pipewire-pulse wireplumber \
     libcap \
