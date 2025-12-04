@@ -92,22 +92,22 @@ fi
 # We point it to the steam user's Audio and Video sockets.
 export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
 export XDG_SEAT=seat0 
-
-sunshine &
-# INPUT WATCHDOG (Enhanced)
 (
     while true; do
-        # 1. Force permissions on ALL input devices (old and new)
+        # 1. Force permissions
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         
-        # 2. Force ownership to steam user (Seatd running as steam needs this?)
-        # Actually, seatd is running as root, but let's be safe.
-        chown steam:input /dev/input/event* 2>/dev/null
+        # 2. FORCE NOTIFICATION (The Fix for Empty List)
+        # This tells the OS "Hey, check your input devices again!"
+        udevadm trigger --action=add --subsystem-match=input
         
-        sleep 2
+        sleep 5
     done
 ) &
+
+
+sunshine &
 
 
 # --- 8. Keep Alive ---
