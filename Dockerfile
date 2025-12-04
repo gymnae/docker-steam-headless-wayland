@@ -41,9 +41,9 @@ RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
     # Create necessary config directories
     mkdir -p /home/steam/.config/sunshine /home/steam/.steam/root/compatibilitytools.d && \
     chown -R steam:steam /home/steam && \
-    # Grant Capabilities (Crucial for Wayland/Sunshine performance)
-    setcap 'cap_sys_admin+p' /usr/bin/sunshine && \
-    setcap 'cap_sys_nice+eip' /usr/bin/gamescope
+    # Grant Capabilities (Fixed: Use readlink to find the real binary behind the symlink)
+    setcap 'cap_sys_admin+p' $(readlink -f /usr/bin/sunshine) && \
+    setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
