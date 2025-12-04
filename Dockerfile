@@ -14,7 +14,7 @@ RUN pacman -Syu --noconfirm && \
     # Gaming Stack
     steam \
     sunshine \
-    proton-ge \
+    proton-cachyos \
     protontricks \
     # Audio & Fonts
     pipewire pipewire-pulse wireplumber \
