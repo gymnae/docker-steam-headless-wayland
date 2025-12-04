@@ -1,4 +1,4 @@
-FROM cachyos/cachyos-v4:latest
+FROM cachyos/cachyos:latest
 
 # 1. Update & Install EVERYTHING from official Repos
 # CachyOS provides all these packages natively (no compiling).
