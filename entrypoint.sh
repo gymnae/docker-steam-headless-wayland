@@ -6,13 +6,13 @@ echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
-# GPU/Input Access
+# Force GPU/Input Access
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 if [ ! -e /dev/uinput ]; then mknod /dev/uinput c 10 223; fi
 chmod 666 /dev/uinput
 
-# Fake TTYs
+# Fake TTYs (Satisfies seatd)
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
 
@@ -31,7 +31,8 @@ eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
-# --- 3. Start UDEV (Crucial for Controller Tags) ---
+# --- 3. Start UDEV (CRITICAL FOR CONTROLLERS) ---
+# We launch udevd so it can read the 'game-devices-udev' rules we installed.
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon
@@ -47,6 +48,7 @@ chmod 777 /run/seatd.sock
 
 # --- 5. Audio Stack ---
 echo "Starting Audio..."
+# We launch Pipewire as the 'steam' user
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
@@ -78,51 +80,38 @@ done
 if [ -z "$FOUND_SOCKET" ]; then echo "Error: Wayland socket missing"; exit 1; fi
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
+chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
-# --- 8. Start Sunshine (SECURE MODE: STEAM USER) ---
-echo "Starting Sunshine (Steam User)..."
+# --- 8. Start Sunshine (ROOT MODE) ---
+echo "Starting Sunshine..."
+mkdir -p /root/.config
+ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# WATCHDOG (Crucial for Hotplugged Controllers)
+# Audio Auth Hack: Copy steam's cookie to root
+if [ -f /home/steam/.config/pulse/cookie ]; then
+    mkdir -p /root/.config/pulse
+    cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
+fi
+
+# WATCHDOG LOOP (Keeps input and audio alive)
 (
     while true; do
-        # 1. Trigger udev to apply 'game-devices-udev' tags
+        # Trigger udev so Steam sees new controllers
         udevadm trigger --action=change --subsystem-match=input
-        
-        # 2. Ensure 'steam' user owns the new controller node
-        # This fixes "Permission Denied" if the rule sets it to root
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         
-        # 3. Audio Keep-Alive
-        if ! pgrep -u steam wireplumber > /dev/null; then
-            echo "Restarting WirePlumber..."
-            su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
-        fi
+        # Ensure Audio Sink is Default
+        su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-default sink-sunshine-stereo" 2>/dev/null
+        su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0" 2>/dev/null
+        
         sleep 5
     done
 ) &
 
-# Audio Fixer
-su - steam -c "
-    export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR
-    sleep 10
-    SINK_ID=\$(wpctl status | grep 'Sunshine' | awk '{print \$2}' | tr -d '.')
-    if [ ! -z \"\$SINK_ID\" ]; then
-        wpctl set-default \$SINK_ID
-        wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0
-    fi
-" &
-
-# LAUNCH SUNSHINE AS STEAM
-# - XDG_SEAT=seat0: Tells GTK/Sunshine where to attach input
-# - PULSE_SERVER: Tells it where to send audio
-su - steam -c "export HOME=/home/steam && \
-               export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
-               export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && \
-               export WAYLAND_DISPLAY=$WAYLAND_DISPLAY && \
-               export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native && \
-               export XDG_SEAT=seat0 && \
-               sunshine" &
+export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
+export XDG_SEAT=seat0 
+sunshine &
 
 # --- 9. Keep Alive ---
 wait $GS_PID
