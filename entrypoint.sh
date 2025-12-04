@@ -31,20 +31,28 @@ eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
-# --- 3. Seatd ---
+# --- 3. Start UDEV (Crucial for Libinput) ---
+# We run udevd to 'tag' the devices we see in the /dev/input volume
+if [ -x /usr/lib/systemd/systemd-udevd ]; then
+    echo "Starting udevd..."
+    /usr/lib/systemd/systemd-udevd --daemon
+    udevadm trigger
+fi
+
+# --- 4. Seatd ---
 echo "Starting seatd..."
 seatd & 
 export LIBSEAT_BACKEND=seatd
 sleep 1
 chmod 777 /run/seatd.sock
 
-# --- 4. Audio Stack ---
+# --- 5. Audio Stack ---
 echo "Starting Audio..."
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-# --- 5. Gamescope ---
+# --- 6. Gamescope ---
 echo "Starting Gamescope..."
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
@@ -57,7 +65,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
 
 GS_PID=$!
 
-# --- 6. Wait for Wayland Socket ---
+# --- 7. Wait for Wayland Socket ---
 echo "Waiting for Wayland socket..."
 TIMEOUT=90
 FOUND_SOCKET=""
@@ -71,72 +79,30 @@ done
 if [ -z "$FOUND_SOCKET" ]; then echo "Error: Wayland socket missing"; exit 1; fi
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
-
-# ALLOW ROOT ACCESS TO SOCKET
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
-# --- 7. Start Sunshine (ROOT MODE) ---
+# --- 8. Start Sunshine (ROOT MODE) ---
 echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# --- 7.4 START UDEV DAEMON (The Input Fix) ---
-# We need a local udevd to tag the virtual devices Sunshine creates.
-# Without this, libinput sees the files but ignores them.
-if [ -x /usr/lib/systemd/systemd-udevd ]; then
-    echo "Starting udevd..."
-    /usr/lib/systemd/systemd-udevd --daemon
-    # Trigger a full rescan so the DB populates
-    udevadm trigger --action=add
-    udevadm settle
-fi
-
-# --- WATCHDOG ---
-(
-    while true; do
-        # 1. Trigger udev (keeps the DB alive for new devices)
-        udevadm trigger --action=change --subsystem-match=input
-        
-        # 2. Force permissions
-        chmod 666 /dev/input/event* 2>/dev/null
-        chmod 666 /dev/input/js* 2>/dev/null
-        
-        # ... (rest of watchdog) ...
-    done
-) &
-
-# Copy PulseAudio cookie for Root access
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
     cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
 fi
 
-# --- WATCHDOG: FIX INPUT & AUDIO ---
+# Watchdog: Keep triggering udev for new devices
 (
     while true; do
-        # 1. FORCE UDEV TRIGGER (This fixes empty libinput list!)
-        # Tells the kernel to announce the devices again so userspace sees them.
         udevadm trigger --action=change --subsystem-match=input
-        
-        # 2. Force permissions on devices
         chmod 666 /dev/input/event* 2>/dev/null
-        chmod 666 /dev/input/js* 2>/dev/null
-        
-        # 3. Keep-Alive for Audio
-        # If WirePlumber dies (common in headless), restart it
-        if ! pgrep -u steam wireplumber > /dev/null; then
-            echo "Restarting WirePlumber..."
-            su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
-        fi
-        
         sleep 5
     done
 ) &
 
-# Launch Sunshine
 export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
 export XDG_SEAT=seat0 
 sunshine &
 
-# --- 8. Keep Alive ---
+# --- 9. Keep Alive ---
 wait $GS_PID
