@@ -13,16 +13,9 @@ chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
 
-# --- 1.5. FAKE TTY (Crucial for seatd) ---
-# seatd needs a VT to manage. We create fake TTY nodes to satisfy it.
-if [ ! -e /dev/tty0 ]; then
-    mknod /dev/tty0 c 4 0
-    chmod 666 /dev/tty0
-fi
-if [ ! -e /dev/tty1 ]; then
-    mknod /dev/tty1 c 4 1
-    chmod 666 /dev/tty1
-fi
+# --- 1.5. FAKE TTY ---
+if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
+if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
 
 # --- 2. Setup Runtime & DBus ---
 export XDG_RUNTIME_DIR=/run/user/1000
@@ -42,8 +35,6 @@ export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
 # --- 3. Start Seat Daemon ---
-# -g video: Allow video group (steam) to connect
-# We do NOT use -n (socket activation) as it caused errors previously
 echo "Starting seatd..."
 seatd -g video &
 export LIBSEAT_BACKEND=seatd
@@ -56,9 +47,9 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 
 # --- 5. Start Gamescope (Backgrounded) ---
 echo "Starting Gamescope..."
-# We run as 'steam' but keep our environment variables
-# HOME=/home/steam prevents the "Permission denied /root/..." error
-sudo -E -u steam HOME=/home/steam gamescope \
+
+# FIX: Add WLR_LIBINPUT_NO_DEVICES=1 to ignore missing mouse/keyboard
+sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
     -r 60 \
@@ -81,7 +72,6 @@ while [ ! -S "$XDG_RUNTIME_DIR/wayland-0" ] && [ ! -S "$XDG_RUNTIME_DIR/wayland-
     ((TIMEOUT--))
 done
 
-# Detect socket
 if [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
     export WAYLAND_DISPLAY=wayland-0
 else
