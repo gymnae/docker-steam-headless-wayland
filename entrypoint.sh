@@ -1,49 +1,57 @@
 #!/bin/bash
 set -e
 
-# --- 1. Fix Permissions (Crucial for Nested Containers) ---
-# We force the device nodes to be accessible. 
-# In a perfect world, we'd match GIDs. In the real world, this saves your sanity.
-echo "Ensuring GPU permissions..."
-sudo chmod 666 /dev/dri/card0 2>/dev/null || true
-sudo chmod 666 /dev/dri/renderD* 2>/dev/null || true
-
-# Fix config ownership (Docker volumes often break this)
+# --- 1. Fix Permissions (Running as Root) ---
+echo "Fixing permissions..."
+# Fix the volume mount ownership so 'steam' can write config files
 chown -R steam:steam /home/steam/.config
 chown -R steam:steam /home/steam/.steam
 
-# --- 2. Start DBus (Fixes 'Failed to connect to session bus') ---
-echo "Starting DBus..."
-mkdir -p /run/dbus
-sudo dbus-daemon --system --fork
+# Allow access to GPU devices (Fixes GID mismatch issues)
+chmod 666 /dev/dri/card0 2>/dev/null || true
+chmod 666 /dev/dri/renderD* 2>/dev/null || true
 
-# Start a Session Bus for the 'steam' user
-# This is the magic sauce required for PipeWire in headless Docker
-export $(dbus-launch)
-export DBUS_SESSION_BUS_ADDRESS
-
-# --- 3. Initialize Runtime Dir (Fixes PipeWire 'No such file') ---
-export XDG_RUNTIME_DIR=/run/user/$(id -u)
+# --- 2. Setup Runtime Directory ---
+# PipeWire requires this directory to be owned by the user (ID 1000)
+export XDG_RUNTIME_DIR=/run/user/1000
 mkdir -p $XDG_RUNTIME_DIR
 chmod 0700 $XDG_RUNTIME_DIR
+chown steam:steam $XDG_RUNTIME_DIR
 
-# --- 4. Start Services ---
+# --- 3. Start System DBus ---
+echo "Starting System DBus..."
+mkdir -p /run/dbus
+dbus-daemon --system --fork
+
+# --- 4. Start Session DBus (As Steam) ---
+# We spawn the session bus AS the user 'steam' and capture the address
+echo "Starting Session DBus..."
+DBUS_ENV=$(su - steam -c "dbus-launch --sh-syntax")
+eval "$DBUS_ENV"
+export DBUS_SESSION_BUS_ADDRESS
+export DBUS_SYSTEM_BUS_ADDRESS
+
+# --- 5. Start Services (As Steam) ---
+# We use 'su - steam -c' or 'sudo -u steam' to run everything as the user
+
 echo "Starting Audio Stack..."
-pipewire &
-pipewire-pulse &
-wireplumber &
+# We explicitly pass the environment variables we just generated
+su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
+su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
+su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-echo "Linking Proton Versions..."
+echo "Linking Compatibility Tools..."
 mkdir -p /home/steam/.steam/root/compatibilitytools.d
 find /usr/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
     -exec ln -sfn {} /home/steam/.steam/root/compatibilitytools.d/ \;
+chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
 
 echo "Starting Sunshine..."
-sunshine &
+su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && sunshine" &
 
 echo "Starting Gamescope..."
-# We pass the DBus env vars explicitly to Gamescope
-exec gamescope \
+# Exec into gamescope as 'steam', preserving the DBus environment
+exec sudo -E -u steam gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
     -r 60 \
