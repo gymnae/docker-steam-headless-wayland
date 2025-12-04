@@ -9,8 +9,8 @@ chown -R steam:steam /home/steam/.config
 chown -R steam:steam /home/steam/.steam
 chown -R steam:steam /home/steam/.local
 
-# GPU & Input Access (Crucial for Sunshine/Gamescope)
-# We make them globally writable to bypass group/user mismatch issues in containers
+# GPU & Input Access
+# Grant global R/W access to bypass container GID mismatch issues
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
@@ -32,10 +32,11 @@ eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
-# --- 3. Start Seat Daemon (The "No Seat" Fix) ---
-# seatd allows Gamescope to access hardware without systemd-logind
+# --- 3. Start Seat Daemon (FIXED) ---
+# Removed '-n' which was causing the crash.
+# -g video: Allows users in the 'video' group (steam) to connect.
 echo "Starting seatd..."
-seatd -g video -n &
+seatd -g video &
 export LIBSEAT_BACKEND=seatd
 
 # --- 4. Start Audio Stack ---
@@ -59,7 +60,7 @@ sudo -E -u steam HOME=/home/steam gamescope \
 # Capture Gamescope PID
 GS_PID=$!
 
-# --- 6. Wait for Wayland Socket (The Race Condition Fix) ---
+# --- 6. Wait for Wayland Socket (Race Condition Fix) ---
 echo "Waiting for Wayland socket..."
 TIMEOUT=30
 while [ ! -S "$XDG_RUNTIME_DIR/wayland-0" ] && [ ! -S "$XDG_RUNTIME_DIR/wayland-1" ]; do
