@@ -121,24 +121,36 @@ if [ -f /home/steam/.config/pulse/cookie ]; then
     cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
 fi
 
-# SMART WATCHDOG
+# SMART WATCHDOG (Gentle Version)
 (
-    LAST_COUNT=0
+    # Initial Trigger to populate DB
+    udevadm trigger --action=add
+    udevadm settle
+    
+    LAST_COUNT=$(ls -1 /dev/input | wc -l)
+    
     while true; do
-        NEW_COUNT=$(ls -1 /dev/input | wc -l)
-        if [ "$NEW_COUNT" != "$LAST_COUNT" ]; then
+        CURRENT_COUNT=$(ls -1 /dev/input | wc -l)
+        
+        # Only trigger if device count CHANGES
+        if [ "$CURRENT_COUNT" != "$LAST_COUNT" ]; then
             echo "New input devices detected! Triggering udev..."
             udevadm trigger --action=change --subsystem-match=input
-            LAST_COUNT=$NEW_COUNT
+            LAST_COUNT=$CURRENT_COUNT
         fi
 
+        # Always ensure permissions (Cheap operation)
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         chmod 666 /dev/hidraw* 2>/dev/null
 
-        # Keep Audio Alive
+        # Keep Audio Alive (Only if it died)
+        if ! pgrep -u steam wireplumber > /dev/null; then
+             su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
+        fi
+        
+        # Force Sink Default (Once every 10s is enough)
         su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-default sink-sunshine-stereo" 2>/dev/null
-        su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0" 2>/dev/null
         
         sleep 5
     done
