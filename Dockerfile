@@ -1,13 +1,25 @@
 FROM archlinux:latest
 
-# 1. Enable Multilib (Steam) & Update
+# 1. Initialize Arch, Multilib, and Chaotic-AUR
+# We install the Chaotic-AUR keyring and mirrorlist so we can pull 'sunshine' as a binary.
 RUN echo "[multilib]" >> /etc/pacman.conf && \
     echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf && \
+    pacman-key --init && \
+    pacman-key --populate archlinux && \
+    pacman -Syu --noconfirm --needed base-devel git sudo && \
+    # Install Chaotic-AUR Keyring
+    pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com && \
+    pacman-key --lsign-key 3056513887B78AEB && \
+    pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+                          'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' && \
+    # Add Chaotic-AUR to pacman.conf
+    echo "[chaotic-aur]" >> /etc/pacman.conf && \
+    echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf && \
+    # Update database to see the new repo
     pacman -Syu --noconfirm
 
 # 2. Install Wayland, Gamescope, and Drivers
 RUN pacman -S --noconfirm \
-    base-devel git sudo vim \
     gamescope \
     xorg-xwayland \
     nvidia-utils \
