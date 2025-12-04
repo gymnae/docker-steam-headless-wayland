@@ -1,29 +1,48 @@
 #!/bin/bash
+set -e
 
-# 1. Start Audio Subsystem (PipeWire)
-# Steam Remote Play and Sunshine rely on this for sound.
-/usr/bin/pipewire &
-/usr/bin/pipewire-pulse &
-/usr/bin/wireplumber &
+# --- 1. Fix Permissions (Crucial for Nested Containers) ---
+# We force the device nodes to be accessible. 
+# In a perfect world, we'd match GIDs. In the real world, this saves your sanity.
+echo "Ensuring GPU permissions..."
+sudo chmod 666 /dev/dri/card0 2>/dev/null || true
+sudo chmod 666 /dev/dri/renderD* 2>/dev/null || true
 
-# 2. Link Compatibility Tools
-# We look for ANY folder in the system compatibility directory.
-# This will catch 'proton-cachyos' (from repo) and 'GE-Proton-X-X' (from curl).
-echo "--- Linking Proton Versions ---"
+# Fix config ownership (Docker volumes often break this)
+chown -R steam:steam /home/steam/.config
+chown -R steam:steam /home/steam/.steam
+
+# --- 2. Start DBus (Fixes 'Failed to connect to session bus') ---
+echo "Starting DBus..."
+mkdir -p /run/dbus
+sudo dbus-daemon --system --fork
+
+# Start a Session Bus for the 'steam' user
+# This is the magic sauce required for PipeWire in headless Docker
+export $(dbus-launch)
+export DBUS_SESSION_BUS_ADDRESS
+
+# --- 3. Initialize Runtime Dir (Fixes PipeWire 'No such file') ---
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+mkdir -p $XDG_RUNTIME_DIR
+chmod 0700 $XDG_RUNTIME_DIR
+
+# --- 4. Start Services ---
+echo "Starting Audio Stack..."
+pipewire &
+pipewire-pulse &
+wireplumber &
+
+echo "Linking Proton Versions..."
 mkdir -p /home/steam/.steam/root/compatibilitytools.d
 find /usr/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
-    -exec echo "Found and Linking: {}" \; \
     -exec ln -sfn {} /home/steam/.steam/root/compatibilitytools.d/ \;
-echo "-------------------------------"
 
-# 3. Start Sunshine (Wayland Mode)
-# Runs in background, capturing the Gamescope output.
+echo "Starting Sunshine..."
 sunshine &
 
-# 4. Start Gamescope (Pure Wayland Environment)
-# Pinned to 1440p (2560x1440) for performance balance.
-# -F fsr : Enables FSR upscaling if you run a game at 1080p inside this 1440p container.
 echo "Starting Gamescope..."
+# We pass the DBus env vars explicitly to Gamescope
 exec gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
