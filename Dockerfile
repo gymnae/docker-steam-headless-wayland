@@ -1,4 +1,4 @@
-FROM cachyos/cachyos:latest
+FROM cachyos/cachyos-v4:latest
 
 # 1. Update & Install EVERYTHING from official Repos
 # CachyOS provides all these packages natively (no compiling).
@@ -14,7 +14,7 @@ RUN pacman -Syu --noconfirm && \
     # Gaming Stack
     steam \
     sunshine \
-    proton-ge-custom \
+    proton-ge \
     protontricks \
     # Audio & Fonts
     pipewire pipewire-pulse wireplumber \
