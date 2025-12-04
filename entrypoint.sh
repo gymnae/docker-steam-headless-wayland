@@ -1,28 +1,26 @@
 #!/bin/bash
 
-# 1. Start Audio (PipeWire)
-# Required for audio in both Sunshine and Steam Remote Play
+# 1. Start Audio Stack
 /usr/bin/pipewire &
 /usr/bin/pipewire-pulse &
 /usr/bin/wireplumber &
 
-# 2. Start Sunshine
-# We start it in the background. It will wait for the display to appear.
-# On NVIDIA + Dummy Plug, Sunshine uses KMS capture (grabbing the HDMI signal directly).
+# 2. Link Compatibility Tools (Proton-GE AND Proton-CachyOS)
+# We iterate over everything in the system folder and link it to the user folder.
+echo "--- Linking Compatibility Tools ---"
+mkdir -p /home/steam/.steam/root/compatibilitytools.d
+find /usr/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
+    -exec echo "Linking: {}" \; \
+    -exec ln -sfn {} /home/steam/.steam/root/compatibilitytools.d/ \;
+echo "-----------------------------------"
+
+# 3. Start Sunshine (Wayland Mode)
 sunshine &
 
-# 3. Start Gamescope
-# We run in "Embedded" mode (-e is implied if no other WM is running).
-# We bind it to the resolution of your Dummy Plug (e.g., 1080p or 4k).
-# --steam tells Gamescope to treat the nested window as Steam.
-
-echo "Starting Gamescope pinned to 1440p..."
-
-# -W 2560 -H 1440 : The "Internal" game resolution.
-# -w 2560 -h 1440 : The "Output" signal sent to the dummy plug.
-# -r 60 : Lock to 60Hz.
-# -F fsr : Use FSR if the game itself renders lower than 1440p.
-
+# 4. Start Gamescope (Pure Wayland Environment)
+# Note: xorg-xwayland is still running in the background for game compatibility,
+# but the session itself is Wayland.
+echo "Starting Gamescope..."
 exec gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
