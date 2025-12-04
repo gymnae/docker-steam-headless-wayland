@@ -36,8 +36,15 @@ export DBUS_SYSTEM_BUS_ADDRESS
 
 # --- 3. Start Seat Daemon ---
 echo "Starting seatd..."
-seatd -g video &
+# REMOVE '-g video'. Run as root to ensure access to Input AND Video devices.
+seatd & 
 export LIBSEAT_BACKEND=seatd
+
+# Give seatd a moment to create the socket
+sleep 1
+
+# Grant 'steam' user access to the seatd socket
+chmod 777 /run/seatd.sock
 
 # --- 4. Start Audio Stack ---
 echo "Starting Audio..."
