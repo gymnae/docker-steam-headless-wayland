@@ -12,6 +12,7 @@ RUN pacman -Syu --noconfirm && \
     gamescope \
     xorg-xwayland \
     sunshine \
+    seatd \
     # The Proton You Requested
     proton-cachyos \
     # Drivers (Required for 32-bit games too)
