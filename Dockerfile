@@ -23,6 +23,7 @@ RUN pacman -Syu --noconfirm && \
     lib32-pipewire \
     lib32-libpulse \
     lib32-alsa-plugins \
+    game-devices-udev \
     # Minimal Tools needed for setup/scripts
     openssh sudo vim curl tar python libcap \
     # Fonts (Required for Steam UI text)
