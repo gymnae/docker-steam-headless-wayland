@@ -19,25 +19,29 @@ chmod 666 /dev/uinput
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
 
-# --- 2. Runtime Environment & DBus (FIXED) ---
+# --- 2. Runtime Environment & DBus ---
 export XDG_RUNTIME_DIR=/run/user/1000
 mkdir -p $XDG_RUNTIME_DIR
 chmod 0700 $XDG_RUNTIME_DIR
 chown steam:steam $XDG_RUNTIME_DIR
 
-# Start System DBus
+# Start System DBus (Root)
 mkdir -p /run/dbus
 dbus-daemon --system --fork
 
-# Start Session DBus (Manually)
-# We avoid dbus-launch because it can be flaky in scripts.
-# We start the daemon directly and write the address to a file.
-echo "Starting Persistent Session DBus..."
+# Start Session DBus (AS STEAM USER)
+# This is crucial. PipeWire and Gamescope run as steam, so the bus must belong to steam.
+echo "Starting Session DBus as steam..."
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
-dbus-daemon --session --address="$DBUS_SESSION_BUS_ADDRESS" --fork --nopidfile
 
-# Export it for everyone
-export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
+# We use 'su' to start the daemon as the user
+su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork --nopidfile"
+
+# Give it a moment to start
+sleep 1
+
+# Export for Root processes (like Sunshine) to see it
+export DBUS_SESSION_BUS_ADDRESS
 
 # --- 3. Start UDEV ---
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
@@ -56,7 +60,7 @@ chmod 777 /run/seatd.sock
 # --- 5. Audio Stack ---
 echo "Starting Audio..."
 export PIPEWIRE_LATENCY="1024/48000"
-# Pass the explicit DBUS address to the su command
+# Note: We don't need to pass DBUS address explicitly anymore because the user session owns it
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
@@ -111,6 +115,7 @@ audio_sink = pulse
 EOF
 chown steam:steam /home/steam/.config/sunshine/sunshine.conf
 
+# PulseAudio Cookie Fix
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
     cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
