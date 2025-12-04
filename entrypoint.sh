@@ -1,36 +1,29 @@
 #!/bin/bash
 set -e
 
-# --- 1. Fix Permissions ---
+# --- 1. Setup Directories & Permissions ---
 echo "Fixing permissions..."
-
-# 1.1 Config Directories
+# Ensure config dirs exist for steam user
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config
 chown -R steam:steam /home/steam/.steam
 chown -R steam:steam /home/steam/.local
 
-# 1.2 GPU Access
+# GPU Access (Global R/W to bypass container groups)
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 
-# 1.3 UINPUT ACCESS (The Input Fix)
-# We check if the node exists. If not, we make it.
-# Then we CHOWN it to steam so there is zero doubt about access.
+# UINPUT Access (Create node if missing)
 if [ ! -e /dev/uinput ]; then
     mknod /dev/uinput c 10 223
 fi
-# Force ownership to steam user
-chown steam:steam /dev/uinput
-chmod 660 /dev/uinput
+chmod 666 /dev/uinput
 
-# Verify it worked in the logs
-ls -l /dev/uinput
-
-# --- 1.5. FAKE TTY ---
+# Fake TTYs for seatd
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
-# --- 2. Setup Runtime & DBus ---
+
+# --- 2. Setup Runtime Environment ---
 export XDG_RUNTIME_DIR=/run/user/1000
 mkdir -p $XDG_RUNTIME_DIR
 chmod 0700 $XDG_RUNTIME_DIR
@@ -49,24 +42,20 @@ export DBUS_SYSTEM_BUS_ADDRESS
 
 # --- 3. Start Seat Daemon ---
 echo "Starting seatd..."
-# REMOVE '-g video'. Run as root to ensure access to Input AND Video devices.
 seatd & 
 export LIBSEAT_BACKEND=seatd
-
-# Give seatd a moment to create the socket
 sleep 1
-
-# Grant 'steam' user access to the seatd socket
 chmod 777 /run/seatd.sock
 
-# --- 4. Start Audio Stack ---
+# --- 4. Start Audio Stack (As Steam) ---
 echo "Starting Audio..."
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-# --- 5. Start Gamescope (Backgrounded) ---
+# --- 5. Start Gamescope (As Steam) ---
 echo "Starting Gamescope..."
+# WLR_LIBINPUT_NO_DEVICES=1 prevents crash before Sunshine creates the mouse
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
@@ -78,9 +67,8 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
 
 GS_PID=$!
 
-# --- 6. Wait for Wayland Socket (FIXED LOGIC) ---
+# --- 6. Wait for Wayland Socket ---
 echo "Waiting for Wayland socket..."
-# Increase timeout to 90s for Steam updates
 TIMEOUT=90
 FOUND_SOCKET=""
 
@@ -101,22 +89,28 @@ done
 
 if [ -z "$FOUND_SOCKET" ]; then
     echo "Error: Timed out waiting for Wayland socket!"
-    echo "Contents of $XDG_RUNTIME_DIR:"
-    ls -la $XDG_RUNTIME_DIR
     exit 1
 fi
-
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 
-# --- 7. Start Sunshine ---
-echo "Starting Sunshine..."
-# ADDED: XDG_SEAT=seat0 so GTK knows where to find input
-su - steam -c "export HOME=/home/steam && \
-               export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
-               export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && \
-               export WAYLAND_DISPLAY=$WAYLAND_DISPLAY && \
-               export XDG_SEAT=seat0 && \
-               sunshine" &
-# --- 8. Keep Container Alive ---
+# --- 7. Start Sunshine (AS ROOT) ---
+echo "Starting Sunshine (Root Mode)..."
+
+# 7.1 Link Configs: Sunshine running as root looks in /root/.config
+# We symlink it to the steam user's config mount so your settings persist.
+mkdir -p /root/.config
+ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
+
+# 7.2 Launch
+# We run as root to get full /dev/uinput access.
+# We point XDG_RUNTIME_DIR and PULSE_SERVER to the 'steam' user's session
+# so it can see the display and hear the audio.
+export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
+export XDG_SEAT=seat0 
+
+# Run directly (no su)
+sunshine &
+
+# --- 8. Keep Alive ---
 wait $GS_PID
