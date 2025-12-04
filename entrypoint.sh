@@ -47,8 +47,6 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 
 # --- 5. Start Gamescope (Backgrounded) ---
 echo "Starting Gamescope..."
-
-# FIX: Add WLR_LIBINPUT_NO_DEVICES=1 to ignore missing mouse/keyboard
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
@@ -60,23 +58,35 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
 
 GS_PID=$!
 
-# --- 6. Wait for Wayland Socket ---
+# --- 6. Wait for Wayland Socket (FIXED LOGIC) ---
 echo "Waiting for Wayland socket..."
-TIMEOUT=30
-while [ ! -S "$XDG_RUNTIME_DIR/wayland-0" ] && [ ! -S "$XDG_RUNTIME_DIR/wayland-1" ]; do
-    if [ $TIMEOUT -le 0 ]; then
-        echo "Error: Gamescope failed to create Wayland socket!"
-        exit 1
+# Increase timeout to 90s for Steam updates
+TIMEOUT=90
+FOUND_SOCKET=""
+
+while [ $TIMEOUT -gt 0 ]; do
+    if [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
+        FOUND_SOCKET="wayland-0"
+        break
+    elif [ -S "$XDG_RUNTIME_DIR/wayland-1" ]; then
+        FOUND_SOCKET="wayland-1"
+        break
+    elif [ -S "$XDG_RUNTIME_DIR/gamescope-0" ]; then
+        FOUND_SOCKET="gamescope-0"
+        break
     fi
     sleep 1
     ((TIMEOUT--))
 done
 
-if [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
-    export WAYLAND_DISPLAY=wayland-0
-else
-    export WAYLAND_DISPLAY=wayland-1
+if [ -z "$FOUND_SOCKET" ]; then
+    echo "Error: Timed out waiting for Wayland socket!"
+    echo "Contents of $XDG_RUNTIME_DIR:"
+    ls -la $XDG_RUNTIME_DIR
+    exit 1
 fi
+
+export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 
 # --- 7. Start Sunshine ---
