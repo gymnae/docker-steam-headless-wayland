@@ -20,6 +20,9 @@ RUN pacman -Syu --noconfirm && \
     lib32-nvidia-utils \
     # Audio
     pipewire pipewire-pulse wireplumber \
+    lib32-pipewire \
+    lib32-libpulse \
+    lib32-alsa-plugins \
     # Minimal Tools needed for setup/scripts
     openssh sudo vim curl tar python libcap \
     # Fonts (Required for Steam UI text)
