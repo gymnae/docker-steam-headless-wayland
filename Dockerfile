@@ -11,6 +11,7 @@ RUN pacman -Syu --noconfirm && \
     xorg-xwayland \
     nvidia-utils \
     lib32-nvidia-utils \
+    libva-nvidia-driver \
     # Gaming Stack
     steam \
     sunshine \
