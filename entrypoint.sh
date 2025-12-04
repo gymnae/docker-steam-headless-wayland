@@ -15,9 +15,19 @@ sunshine &
 # We run in "Embedded" mode (-e is implied if no other WM is running).
 # We bind it to the resolution of your Dummy Plug (e.g., 1080p or 4k).
 # --steam tells Gamescope to treat the nested window as Steam.
-echo "Starting Gamescope on Dummy Plug..."
 
-# Note: Adjust -W and -H to match your Dummy Plug's capability (e.g., 1920x1080 or 3840x2160)
-# -r 60: 60 FPS
-# --force-grab-cursor: Ensures mouse stays inside
-exec gamescope -W 1920 -H 1080 -r 60 --force-grab-cursor -- steam -gamepadui
+echo "Starting Gamescope pinned to 1440p..."
+
+# -W 2560 -H 1440 : The "Internal" game resolution.
+# -w 2560 -h 1440 : The "Output" signal sent to the dummy plug.
+# -r 60 : Lock to 60Hz.
+# -F fsr : Use FSR if the game itself renders lower than 1440p.
+
+exec gamescope \
+    -W 2560 -H 1440 \
+    -w 2560 -h 1440 \
+    -r 60 \
+    -F fsr \
+    --force-grab-cursor \
+    -- \
+    steam -gamepadui -tenfoot
