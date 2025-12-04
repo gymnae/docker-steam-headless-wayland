@@ -111,7 +111,12 @@ echo "Wayland socket found: $WAYLAND_DISPLAY"
 
 # --- 7. Start Sunshine ---
 echo "Starting Sunshine..."
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export WAYLAND_DISPLAY=$WAYLAND_DISPLAY && sunshine" &
-
+# ADDED: XDG_SEAT=seat0 so GTK knows where to find input
+su - steam -c "export HOME=/home/steam && \
+               export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
+               export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && \
+               export WAYLAND_DISPLAY=$WAYLAND_DISPLAY && \
+               export XDG_SEAT=seat0 && \
+               sunshine" &
 # --- 8. Keep Container Alive ---
 wait $GS_PID
