@@ -94,6 +94,21 @@ export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
 export XDG_SEAT=seat0 
 
 sunshine &
+# INPUT WATCHDOG (Enhanced)
+(
+    while true; do
+        # 1. Force permissions on ALL input devices (old and new)
+        chmod 666 /dev/input/event* 2>/dev/null
+        chmod 666 /dev/input/js* 2>/dev/null
+        
+        # 2. Force ownership to steam user (Seatd running as steam needs this?)
+        # Actually, seatd is running as root, but let's be safe.
+        chown steam:input /dev/input/event* 2>/dev/null
+        
+        sleep 2
+    done
+) &
+
 
 # --- 8. Keep Alive ---
 wait $GS_PID
