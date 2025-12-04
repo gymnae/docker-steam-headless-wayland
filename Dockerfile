@@ -42,11 +42,14 @@ RUN mkdir -p /usr/share/steam/compatibilitytools.d/ && \
 # 3. Setup User 'steam'
 RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
     echo "steam ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
-    # Create necessary config directories
     mkdir -p /home/steam/.config/sunshine /home/steam/.steam/root/compatibilitytools.d && \
     chown -R steam:steam /home/steam && \
-    # Grant Capabilities (Fixed: Use readlink to find the real binary behind the symlink)
-    setcap 'cap_sys_admin+p' $(readlink -f /usr/bin/sunshine) && \
+    # CAPABILITIES FIX:
+    # cap_sys_admin+p = Required for KMS screen capture (NVIDIA)
+    # cap_net_admin+p = Required for some network features
+    # Note: uinput access usually requires just correct file permissions, 
+    # but running as non-root is safer.
+    setcap 'cap_sys_admin,cap_net_admin+p' $(readlink -f /usr/bin/sunshine) && \
     setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
 
 COPY entrypoint.sh /entrypoint.sh
