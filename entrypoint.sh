@@ -3,20 +3,33 @@ set -e
 
 # --- 1. Fix Permissions ---
 echo "Fixing permissions..."
+
+# 1.1 Config Directories
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config
 chown -R steam:steam /home/steam/.steam
 chown -R steam:steam /home/steam/.local
 
-# GPU & Input Access
+# 1.2 GPU Access
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
-chmod 666 /dev/uinput 2>/dev/null || true
+
+# 1.3 UINPUT ACCESS (The Input Fix)
+# We check if the node exists. If not, we make it.
+# Then we CHOWN it to steam so there is zero doubt about access.
+if [ ! -e /dev/uinput ]; then
+    mknod /dev/uinput c 10 223
+fi
+# Force ownership to steam user
+chown steam:steam /dev/uinput
+chmod 660 /dev/uinput
+
+# Verify it worked in the logs
+ls -l /dev/uinput
 
 # --- 1.5. FAKE TTY ---
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
-
 # --- 2. Setup Runtime & DBus ---
 export XDG_RUNTIME_DIR=/run/user/1000
 mkdir -p $XDG_RUNTIME_DIR
