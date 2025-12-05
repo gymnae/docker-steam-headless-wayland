@@ -15,6 +15,7 @@ RUN pacman -Syu --noconfirm && \
     # Gaming Stack
     steam \
     sunshine \
+    proton-cachyos \
     # Audio (64-bit AND 32-bit required for Steam)
     pipewire pipewire-pulse wireplumber \
     lib32-pipewire lib32-libpulse lib32-alsa-plugins \
