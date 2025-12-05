@@ -33,7 +33,16 @@ RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
     cp /tmp/gdu/*.rules /etc/udev/rules.d/ && \
     rm -rf /tmp/gdu
 
-# 3. Setup User 'steam'
+# 3. Install Proton-GE (Manual)
+# We download the latest GE-Proton tarball and extract it to the system folder
+RUN mkdir -p /usr/share/steam/compatibilitytools.d/ && \
+    curl -s https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest \
+    | grep "browser_download_url" | grep ".tar.gz" | head -n 1 | cut -d : -f 2,3 | tr -d \" \
+    | xargs curl -L -o /tmp/proton-ge.tar.gz && \
+    tar -xf /tmp/proton-ge.tar.gz -C /usr/share/steam/compatibilitytools.d/ && \
+    rm /tmp/proton-ge.tar.gz
+
+# 4. Setup User 'steam'
 RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
     echo "steam ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
     mkdir -p /home/steam/.config/sunshine /home/steam/.steam/root/compatibilitytools.d && \
