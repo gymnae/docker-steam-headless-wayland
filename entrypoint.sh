@@ -1,24 +1,21 @@
 #!/bin/bash
 set -e
-# --- 0. CLEANUP (Crucial for restarts) ---
-# Kill any lingering processes if we are restarting inside the same container
-killall -9 sunshine gamescope steam seatd pulseaudio pipewire 2>/dev/null || true
-# Clean up locks and sockets
-rm -rf /tmp/.X* /tmp/source_engine_* /run/user/1000/* /run/seatd.sock /tmp/pulse-* 2>/dev/null
 
 # --- 1. Permissions ---
 echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
-# GPU/Input/HID Access
+# Hardware Access (GPU / UINPUT / UHID)
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
-chmod 666 /dev/hidraw* 2>/dev/null || true
+chmod 666 /dev/uhid 2>/dev/null || true        # Required for DS5/DS4 Virtual HID
+chmod 666 /dev/hidraw* 2>/dev/null || true     # Required for Gyro/Touchpad
 
 if [ ! -e /dev/uinput ]; then mknod /dev/uinput c 10 223; fi
-chmod 666 /dev/uinput
+if [ ! -e /dev/uhid ]; then mknod /dev/uhid c 10 239; fi
+chmod 666 /dev/uinput /dev/uhid
 
 # Fake TTYs
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
@@ -39,7 +36,7 @@ eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
-# --- 3. Start UDEV (CRITICAL) ---
+# --- 3. Start UDEV (Required for Steam Controller Detection) ---
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon
@@ -53,17 +50,22 @@ export LIBSEAT_BACKEND=seatd
 sleep 1
 chmod 777 /run/seatd.sock
 
-# --- 5. Audio Stack ---
+# --- 5. Audio Stack (Unified Socket) ---
 echo "Starting Audio..."
 export PIPEWIRE_LATENCY="1024/48000"
+export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
+
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
+# Wait for socket creation
+sleep 2
+chmod 777 ${XDG_RUNTIME_DIR}/pulse/native 2>/dev/null || true
+
 # --- 6. Gamescope ---
 echo "Starting Gamescope..."
-# -steamos: Tells Steam it's running in a compositor environment (improves integration)
-# -cef-disable-gpu: Prevents Steam UI flickering/black screen (games still use GPU)
+# Removed manual SDL mappings so Steam can auto-detect native types
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
@@ -71,7 +73,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -F fsr \
     --force-grab-cursor \
     -- \
-    steam -gamepadui -tenfoot -steamos -noverifyfiles -cef-disable-gpu &
+    steam -gamepadui -tenfoot &
 
 GS_PID=$!
 
@@ -89,27 +91,51 @@ done
 if [ -z "$FOUND_SOCKET" ]; then echo "Error: Wayland socket missing"; exit 1; fi
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
+chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
-# --- 8. Start Sunshine (STEAM USER MODE) ---
-echo "Starting Sunshine..."
+# --- 8. Start Sunshine (ROOT MODE) ---
+echo "Starting Sunshine (Root Mode)..."
+mkdir -p /root/.config
+ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# Smart Watchdog (Runs as Root)
+# CONFIG: Set gamepad to 'auto' for native passthrough
+cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
+[general]
+address = 0.0.0.0
+port = 47990
+upnp = disabled
+# AUTO: Detects DS4/DS5/Switch/Xbox automatically
+gamepad = auto
+[video]
+capture = kms
+encoder = nvenc
+[audio]
+audio_sink = pulse
+EOF
+chown steam:steam /home/steam/.config/sunshine/sunshine.conf
+
+if [ -f /home/steam/.config/pulse/cookie ]; then
+    mkdir -p /root/.config/pulse
+    cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
+fi
+
+# WATCHDOG
 (
     LAST_COUNT=0
     while true; do
-        # Trigger udev when devices change (Fixes Input)
         NEW_COUNT=$(ls -1 /dev/input | wc -l)
         if [ "$NEW_COUNT" != "$LAST_COUNT" ]; then
             udevadm trigger --action=change --subsystem-match=input
             LAST_COUNT=$NEW_COUNT
         fi
         
-        # Keep permissions open
+        # Ensure new devices are accessible
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         chmod 666 /dev/hidraw* 2>/dev/null
+        chmod 666 /dev/uhid 2>/dev/null
         
-        # Fix Audio
+        # Keep Audio Default
         su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-default sink-sunshine-stereo" 2>/dev/null
         su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0" 2>/dev/null
         
@@ -117,27 +143,10 @@ echo "Starting Sunshine..."
     done
 ) &
 
-# LAUNCH SUNSHINE AS STEAM
-# This prevents the GDK crash. We rely on the Dockerfile 'setcap' to allow uinput access.
-export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
+export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
 export XDG_SEAT=seat0 
 
-su - steam -c "export HOME=/home/steam && \
-               export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
-               export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && \
-               export WAYLAND_DISPLAY=$WAYLAND_DISPLAY && \
-               export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native && \
-               export XDG_SEAT=seat0 && \
-               sunshine" &
+sunshine &
 
-# --- 9. Verification & Keep Alive ---
-sleep 5
-# Check if Sunshine is alive using 'ps' or 'ss' (since netstat might be missing)
-echo "Checking Sunshine status..."
-if ps aux | grep -v grep | grep sunshine > /dev/null; then
-    echo "Sunshine is RUNNING."
-else
-    echo "Sunshine CRASHED immediately. Checking logs..."
-fi
-
+# --- 9. Keep Alive ---
 wait $GS_PID
