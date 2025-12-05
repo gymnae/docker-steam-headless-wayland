@@ -1,19 +1,12 @@
 #!/bin/bash
 set -e
 
-# --- 0. AGGRESSIVE CLEANUP (Fixes Port Iteration) ---
-echo "Cleaning up zombie processes..."
-killall -9 sunshine gamescope steam seatd pipewire wireplumber 2>/dev/null || true
-rm -rf /tmp/.X* /tmp/source_engine_* /run/seatd.sock 2>/dev/null
-# Clear XDG Runtime for fresh start
-rm -rf /run/user/1000/*
-
 # --- 1. Permissions ---
 echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
-# Force Hardware Access
+# Hardware Access
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
@@ -27,7 +20,7 @@ chmod 666 /dev/uinput
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
 
-# --- 2. Runtime Environment ---
+# --- 2. Runtime ---
 export XDG_RUNTIME_DIR=/run/user/1000
 mkdir -p $XDG_RUNTIME_DIR
 chmod 0700 $XDG_RUNTIME_DIR
@@ -37,11 +30,10 @@ mkdir -p /run/dbus
 dbus-daemon --system --fork
 
 echo "Starting Session DBus..."
-# We run DBus as steam so PipeWire is happy
-export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
-su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork --nopidfile"
-sleep 1
+DBUS_ENV=$(su - steam -c "dbus-launch --sh-syntax")
+eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
+export DBUS_SYSTEM_BUS_ADDRESS
 
 # --- 3. Start UDEV ---
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
@@ -57,35 +49,33 @@ export LIBSEAT_BACKEND=seatd
 sleep 1
 chmod 777 /run/seatd.sock
 
-# --- 5. Audio Stack (TCP MODE - The Fix) ---
+# --- 5. Audio Stack (TCP MODE) ---
 echo "Starting Audio..."
 export PIPEWIRE_LATENCY="1024/48000"
 
-# Launch PipeWire stack
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
+# Wait for audio to be ready
 sleep 3
 
-# LOAD TCP MODULE: This allows Root (Sunshine) to talk to Steam (Audio) via localhost
-# Bypasses all socket/cookie permission errors.
-echo "Enabling PulseAudio TCP..."
+# ENABLE TCP AUDIO (Bypasses Cookie/Permission Errors)
+echo "Enabling TCP Audio..."
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
-               pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1"
+               pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"
 
-# Create Null Sink for Sunshine
+# Create Null Sink
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo sink_properties=device.description=Sunshine_Stereo"
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
 
-# --- 6. Gamescope ---
+# --- 6. Gamescope (With Input Fix) ---
 echo "Starting Gamescope..."
 
 # DUALSENSE MAPPING FIX:
-# This string corrects the Axis 3/4 (Right Stick) vs Axis 2/5 (Triggers) swap.
-# It matches the specific GUID used by the Linux Kernel for Virtual DS5.
+# This ensures Axis 3/4 and 2/5 are mapped correctly for the virtual device.
 export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
 
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
@@ -101,7 +91,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
 
 GS_PID=$!
 
-# --- 7. Wait for Wayland Socket ---
+# --- 7. Wait for Socket ---
 echo "Waiting for Wayland socket..."
 TIMEOUT=90
 FOUND_SOCKET=""
@@ -117,12 +107,12 @@ export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
-# --- 8. Start Sunshine (ROOT MODE + TCP AUDIO) ---
+# --- 8. Start Sunshine (ROOT + TCP AUDIO) ---
 echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# Config: Auto Gamepad, Pulse Audio
+# Config
 mkdir -p /home/steam/.config/sunshine
 cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
 [general]
@@ -150,12 +140,12 @@ chown steam:steam /home/steam/.config/sunshine/sunshine.conf
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         chmod 666 /dev/hidraw* 2>/dev/null
+        chmod 666 /dev/uhid 2>/dev/null
         sleep 5
     done
 ) &
 
-# FORCE TCP AUDIO CONNECTION
-# Sunshine connects to 127.0.0.1. No cookies needed. No sockets needed.
+# FORCE TCP CONNECTION
 export PULSE_SERVER="tcp:127.0.0.1"
 export PULSE_SOURCE="sunshine-stereo.monitor"
 export PULSE_SINK="sunshine-stereo"
