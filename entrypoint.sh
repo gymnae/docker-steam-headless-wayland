@@ -1,5 +1,10 @@
 #!/bin/bash
 set -e
+# --- 0. CLEANUP (Crucial for restarts) ---
+# Kill any lingering processes if we are restarting inside the same container
+killall -9 sunshine gamescope steam seatd pulseaudio pipewire 2>/dev/null || true
+# Clean up locks and sockets
+rm -rf /tmp/.X* /tmp/source_engine_* /run/user/1000/* /run/seatd.sock /tmp/pulse-* 2>/dev/null
 
 # --- 1. Permissions ---
 echo "Fixing permissions..."
