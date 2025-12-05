@@ -113,17 +113,25 @@ chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
 
 # --- 7. Gamescope ---
 echo "Starting Gamescope..."
-# GAMESCOPE LAUNCH
-# 1. UG_MAX_BUFFERS=128: Increases internal Vulkan buffers to prevent "Out of textures" crash
-# 2. -steamos: Helps Steam integration
-# 3. -noverifyfiles: Faster startup
+
+# 6.1 Define Resolution/Refresh defaults if not set in Docker
+# Default to 1440p @ 60Hz if variables are missing
+WIDTH=${DISPLAY_WIDTH:-2560}
+HEIGHT=${DISPLAY_HEIGHT:-1440}
+REFRESH=${DISPLAY_REFRESH:-60}
+
+echo "Configuring Display: ${WIDTH}x${HEIGHT} @ ${REFRESH}Hz"
+
+# 6.3 Launch Gamescope with Variables
+# -W/-H: Internal Game Resolution
+# -w/-h: Output Window Resolution (We match them for 1:1 pixel mapping)
+# -r: Refresh Rate
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
-    SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
-    UG_MAX_BUFFERS=256 \
     gamescope \
-    -W 2560 -H 1440 \
-    -w 2560 -h 1440 \
-    -r 60 \
+    -W "$WIDTH" -H "$HEIGHT" \
+    -w "$WIDTH" -h "$HEIGHT" \
+    -r "$REFRESH" \
+    -F fsr \
     --force-grab-cursor \
     -- \
     steam -gamepadui -noverifyfiles &
