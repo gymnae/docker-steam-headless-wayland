@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
+# --- 0. CLEANUP ---
+echo "Cleaning up..."
+killall -9 sunshine gamescope steam seatd pipewire wireplumber 2>/dev/null || true
+rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* 2>/dev/null
+
 # --- 1. Permissions ---
 echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
-# Hardware Access
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
@@ -16,7 +20,6 @@ chmod 666 /dev/uhid 2>/dev/null || true
 if [ ! -e /dev/uinput ]; then mknod /dev/uinput c 10 223; fi
 chmod 666 /dev/uinput
 
-# Fake TTYs
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
 
@@ -30,10 +33,11 @@ mkdir -p /run/dbus
 dbus-daemon --system --fork
 
 echo "Starting Session DBus..."
-DBUS_ENV=$(su - steam -c "dbus-launch --sh-syntax")
-eval "$DBUS_ENV"
+# Run DBus as steam
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork --nopidfile"
+sleep 1
 export DBUS_SESSION_BUS_ADDRESS
-export DBUS_SYSTEM_BUS_ADDRESS
 
 # --- 3. Start UDEV ---
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
@@ -57,25 +61,25 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-# Wait for audio to be ready
 sleep 3
 
-# ENABLE TCP AUDIO (Bypasses Cookie/Permission Errors)
-echo "Enabling TCP Audio..."
+# ENABLE TCP & CREATE SINK
+echo "Configuring PulseAudio..."
+# Load TCP module
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"
 
-# Create Null Sink
+# Create Sink
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo sink_properties=device.description=Sunshine_Stereo"
+
+# Set Default (We do this here so Sunshine doesn't have to)
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
 
-# --- 6. Gamescope (With Input Fix) ---
+# --- 6. Gamescope ---
 echo "Starting Gamescope..."
-
-# DUALSENSE MAPPING FIX:
-# This ensures Axis 3/4 and 2/5 are mapped correctly for the virtual device.
+# DUALSENSE MAPPING FIX
 export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
 
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
@@ -107,24 +111,21 @@ export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
-# --- 8. Start Sunshine (ROOT + TCP AUDIO) ---
+# --- 8. Start Sunshine (ROOT + TCP) ---
 echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# Config
+# CONFIG: REMOVED 'audio_sink' to prevent permission error
 mkdir -p /home/steam/.config/sunshine
 cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
 [general]
 address = 0.0.0.0
-port = 47990
 upnp = disabled
 gamepad = auto
 [video]
 capture = kms
 encoder = nvenc
-[audio]
-audio_sink = pulse
 EOF
 chown steam:steam /home/steam/.config/sunshine/sunshine.conf
 
@@ -145,7 +146,7 @@ chown steam:steam /home/steam/.config/sunshine/sunshine.conf
     done
 ) &
 
-# FORCE TCP CONNECTION
+# Force TCP Audio & Source
 export PULSE_SERVER="tcp:127.0.0.1"
 export PULSE_SOURCE="sunshine-stereo.monitor"
 export PULSE_SINK="sunshine-stereo"
