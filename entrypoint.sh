@@ -7,6 +7,7 @@ killall -9 sunshine gamescope steam seatd pipewire wireplumber 2>/dev/null || tr
 rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* 2>/dev/null
 
 # --- 1. Permissions ---
+export PIPEWIRE_LATENCY="128/48000"
 echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
@@ -70,7 +71,7 @@ su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"
 
 # Create Sink
-su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
+su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && I am running a few minutes late; my previous meeting is running over.
                pactl load-module module-null-sink sink_name=sunshine-stereo sink_properties=device.description=Sunshine_Stereo"
 
 # Set Default (We do this here so Sunshine doesn't have to)
