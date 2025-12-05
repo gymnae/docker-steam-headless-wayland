@@ -7,7 +7,6 @@ killall -9 sunshine gamescope steam seatd pipewire wireplumber 2>/dev/null || tr
 rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* 2>/dev/null
 
 # --- 1. Permissions ---
-export PIPEWIRE_LATENCY="128/48000"
 echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
@@ -56,7 +55,13 @@ chmod 777 /run/seatd.sock
 
 # --- 5. Audio Stack (TCP MODE) ---
 echo "Starting Audio..."
-export PIPEWIRE_LATENCY="1024/48000"
+
+# TUNING:
+# 2048/48000 = ~42ms latency. Removes "choppiness" (underruns).
+# force-rate=48000: Prevents low-quality resampling if a game tries 44.1kHz.
+export PIPEWIRE_LATENCY="2048/48000"
+export PIPEWIRE_RATE="48000"
+export PIPEWIRE_QUANTUM="2048"
 
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
@@ -78,12 +83,36 @@ su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && I am running a few min
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
 
-# --- 6. Gamescope ---
+# --- 6. Proton / Compatibility Tools Fix ---
+echo "Linking Proton versions..."
+
+# 1. Ensure the user's Steam directory structure exists
+# Steam creates these on first run, but we need them NOW to plant the tools.
+mkdir -p /home/steam/.steam/root/compatibilitytools.d
+mkdir -p /home/steam/.local/share/Steam/compatibilitytools.d
+
+# 2. Link System Tools (Proton-CachyOS, Proton-GE) to User Steam
+# We search the standard system paths and link them into the user's config.
+# We use -f (force) to overwrite stale broken links.
+
+# Source A: /usr/share/steam/compatibilitytools.d (Standard Package Location)
+if [ -d "/usr/share/steam/compatibilitytools.d" ]; then
+    find /usr/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
+    -exec ln -sfn {} /home/steam/.steam/root/compatibilitytools.d/ \;
+fi
+
+# Source B: /usr/local/share/steam/compatibilitytools.d (Alternative Location)
+if [ -d "/usr/local/share/steam/compatibilitytools.d" ]; then
+    find /usr/local/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
+    -exec ln -sfn {} /home/steam/.steam/root/compatibilitytools.d/ \;
+fi
+
+# 3. Fix Permissions
+# Ensure 'steam' user owns the links, otherwise Steam ignores them for security.
+chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
+
+# --- 7. Gamescope ---
 echo "Starting Gamescope..."
-
-# DUALSENSE MAPPING (Keep this!)
-export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
-
 # GAMESCOPE LAUNCH
 # 1. UG_MAX_BUFFERS=128: Increases internal Vulkan buffers to prevent "Out of textures" crash
 # 2. -steamos: Helps Steam integration
@@ -101,7 +130,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
 
 GS_PID=$!
 
-# --- 7. Wait for Socket ---
+# --- 8. Wait for Socket ---
 echo "Waiting for Wayland socket..."
 TIMEOUT=90
 FOUND_SOCKET=""
@@ -117,7 +146,7 @@ export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
 
-# --- 8. Start Sunshine (ROOT + TCP) ---
+# --- 9. Start Sunshine (ROOT + TCP) ---
 echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
@@ -160,5 +189,5 @@ export XDG_SEAT=seat0
 
 sunshine &
 
-# --- 9. Keep Alive ---
+# --- 10. Keep Alive ---
 wait $GS_PID
