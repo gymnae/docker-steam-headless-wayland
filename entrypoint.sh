@@ -80,8 +80,17 @@ su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
 
 # --- 6. Gamescope ---
 echo "Starting Gamescope..."
+
+# DUALSENSE MAPPING (Keep this!)
+export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
+
+# GAMESCOPE LAUNCH
+# 1. UG_MAX_BUFFERS=128: Increases internal Vulkan buffers to prevent "Out of textures" crash
+# 2. -steamos: Helps Steam integration
+# 3. -noverifyfiles: Faster startup
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
     SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
+    UG_MAX_BUFFERS=128 \
     gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
