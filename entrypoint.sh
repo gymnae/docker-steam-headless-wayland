@@ -85,10 +85,10 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
     -r 60 \
-    -F fsr \
+    -F \
     --force-grab-cursor \
     -- \
-    steam -gamepadui -pipewire-dmabuf &
+    steam -gamepadui -steamos -noverifyfiles &
 
 GS_PID=$!
 
