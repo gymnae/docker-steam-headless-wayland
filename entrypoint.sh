@@ -90,14 +90,14 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller
 # 3. -noverifyfiles: Faster startup
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
     SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
-    UG_MAX_BUFFERS=128 \
+    UG_MAX_BUFFERS=256 \
     gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
     -r 60 \
     --force-grab-cursor \
     -- \
-    steam -noverifyfiles &
+    steam -gamepadui -noverifyfiles &
 
 GS_PID=$!
 
