@@ -57,7 +57,8 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 
 # --- 6. Gamescope ---
 echo "Starting Gamescope..."
-# REMOVED: --disable-xwayland-ei (caused crash)
+# -steamos: Tells Steam it's running in a compositor environment (improves integration)
+# -cef-disable-gpu: Prevents Steam UI flickering/black screen (games still use GPU)
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
@@ -65,7 +66,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
     -F fsr \
     --force-grab-cursor \
     -- \
-    steam -gamepadui -tenfoot &
+    steam -gamepadui -tenfoot -steamos -noverifyfiles -cef-disable-gpu &
 
 GS_PID=$!
 
