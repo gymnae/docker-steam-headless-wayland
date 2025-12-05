@@ -56,34 +56,38 @@ chmod 777 /run/seatd.sock
 # --- 5. Audio Stack (High Quality / Stable Latency) ---
 echo "Starting Audio..."
 
-# TUNING EXPLANATION:
-# PIPEWIRE_LATENCY="2048/48000": Sets ~42ms buffer. Fixes crackling/underruns.
-# PIPEWIRE_QUANTUM="2048": Forces the graph to respect that buffer size.
-# PIPEWIRE_Rate="48000": Prevents expensive resampling if a game tries 44.1kHz.
-export PIPEWIRE_LATENCY="2048/48000"
-export PIPEWIRE_QUANTUM="2048"
+# TUNING: Low Latency + 48kHz Lock
+# 1024/48000 = ~21ms. We rely on RT scheduling to prevent crackle.
+export PIPEWIRE_LATENCY="1024/48000"
+export PIPEWIRE_QUANTUM="1024"
 export PIPEWIRE_RATE="48000"
 
+# Start RTKit Daemon (Critical for Low Latency)
+# This allows PipeWire to request negative 'nice' levels (high priority)
+if [ -x /usr/lib/rtkit-daemon ]; then
+    echo "Starting rtkit-daemon..."
+    /usr/lib/rtkit-daemon --our-realtime-priority=90 --max-realtime-priority=90 &
+fi
+
+# Launch PipeWire stack
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
 sleep 3
 
-# TCP & Sink Setup
+# TCP & Sink Setup (Standard)
 echo "Configuring PulseAudio..."
-# 1. TCP Module (Network Audio for Root Access)
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"
 
-# 2. Null Sink (The Virtual Speaker)
-# We enforce rate=48000 here to match the pipewire settings
+# Force 48000Hz on the sink to match the graph
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo rate=48000 sink_properties=device.description=Sunshine_Stereo"
 
-# 3. Default Sink
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
+               
 # --- 6. Proton / Compatibility Tools Fix ---
 echo "Linking Proton versions..."
 
