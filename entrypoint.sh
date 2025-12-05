@@ -6,16 +6,15 @@ echo "Fixing permissions..."
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
-# Hardware Access (GPU / UINPUT / UHID)
+# GPU/Input/HID Access
 chmod 666 /dev/dri/card0 2>/dev/null || true
 chmod 666 /dev/dri/renderD* 2>/dev/null || true
 chmod 666 /dev/uinput 2>/dev/null || true
-chmod 666 /dev/uhid 2>/dev/null || true        # Required for DS5/DS4 Virtual HID
-chmod 666 /dev/hidraw* 2>/dev/null || true     # Required for Gyro/Touchpad
+chmod 666 /dev/hidraw* 2>/dev/null || true
+chmod 666 /dev/uhid 2>/dev/null || true
 
 if [ ! -e /dev/uinput ]; then mknod /dev/uinput c 10 223; fi
-if [ ! -e /dev/uhid ]; then mknod /dev/uhid c 10 239; fi
-chmod 666 /dev/uinput /dev/uhid
+chmod 666 /dev/uinput
 
 # Fake TTYs
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
@@ -36,7 +35,7 @@ eval "$DBUS_ENV"
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SYSTEM_BUS_ADDRESS
 
-# --- 3. Start UDEV (Required for Steam Controller Detection) ---
+# --- 3. Start UDEV ---
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon
@@ -59,14 +58,21 @@ su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DI
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-# Wait for socket creation
+# Wait for socket
 sleep 2
 chmod 777 ${XDG_RUNTIME_DIR}/pulse/native 2>/dev/null || true
 
-# --- 6. Gamescope ---
+# --- 6. Gamescope (With SDL Mapping Fix) ---
 echo "Starting Gamescope..."
-# Removed manual SDL mappings so Steam can auto-detect native types
-sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 gamescope \
+
+# DUALSENSE MAPPING FIX:
+# This forces Steam to map the virtual Sunshine DS5 correctly, fixing the axis/trigger swap.
+# The GUID 050000004c050000c405000000850000 matches the Virtual DS5 on Linux.
+export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
+
+sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
+    SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
+    gamescope \
     -W 2560 -H 1440 \
     -w 2560 -h 1440 \
     -r 60 \
@@ -92,7 +98,8 @@ if [ -z "$FOUND_SOCKET" ]; then echo "Error: Wayland socket missing"; exit 1; fi
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
-# --- 8. Start Sunshine (ROOT MODE with Audio Fix) ---
+
+# --- 8. Start Sunshine (ROOT MODE + AUDIO FIX) ---
 echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
@@ -113,7 +120,6 @@ audio_sink = pulse
 EOF
 chown steam:steam /home/steam/.config/sunshine/sunshine.conf
 
-# PulseAudio Cookie Fix
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
     cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
@@ -138,26 +144,20 @@ fi
     done
 ) &
 
-# --- AUDIO PRE-FLIGHT CHECK ---
-# We must create the sink BEFORE Sunshine starts so we can bind to it.
-echo "Initializing Audio Sink..."
-
-# 1. Define Socket
-export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
-export XDG_SEAT=seat0 
-
-# 2. Create the Sink Manually (as steam user)
+# --- AUDIO SINK CREATION (The pa_simple_new Fix) ---
+echo "Creating Sunshine Sink..."
+# 1. Create Sink as steam user
 su - steam -c "export PULSE_SERVER=$PULSE_SERVER && \
                pactl load-module module-null-sink sink_name=sunshine-stereo sink_properties=device.description=Sunshine_Stereo"
 
-# 3. Set it as Default (as steam user)
+# 2. Set as Default
 su - steam -c "export PULSE_SERVER=$PULSE_SERVER && \
                pactl set-default-sink sunshine-stereo"
 
-# 4. Launch Sunshine with Explicit Source
-# The monitor source for a null sink is always 'sink_name.monitor'
+# 3. Launch Sunshine pointing to the monitor of that sink
 export PULSE_SOURCE="sunshine-stereo.monitor"
 export PULSE_SINK="sunshine-stereo"
+export XDG_SEAT=seat0 
 
 echo "Launching Sunshine attached to $PULSE_SOURCE..."
 sunshine &
