@@ -61,36 +61,54 @@ export LIBSEAT_BACKEND=seatd
 sleep 1
 chmod 777 /run/seatd.sock
 
-# --- 5. Audio Stack (Socket Mode - Fixed) ---
+# --- 5. Audio Stack (Robust Start) ---
 echo "Starting Audio..."
 export PIPEWIRE_LATENCY="512/48000"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 
-# 1. Pre-create Pulse directory with correct permissions
-# This prevents the "Access Denied" error when PipeWire tries to create the socket
+# 1. Clean locks
+rm -rf $XDG_RUNTIME_DIR/pulse $XDG_RUNTIME_DIR/pipewire-0.lock 2>/dev/null
 mkdir -p $XDG_RUNTIME_DIR/pulse
 chown -R steam:steam $XDG_RUNTIME_DIR/pulse
 chmod 700 $XDG_RUNTIME_DIR/pulse
 
-# 2. Launch PipeWire (The Core)
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire" &
+# 2. Start Core
+echo "Starting PipeWire Core..."
+su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 
-# Wait for PipeWire core to initialize
+# WAIT LOOP: Block until pipewire-0 socket exists
+echo "Waiting for PipeWire socket..."
+TIMEOUT=10
+while [ ! -e "$XDG_RUNTIME_DIR/pipewire-0" ]; do
+    if [ $TIMEOUT -le 0 ]; then echo "Error: PipeWire socket failed to appear"; exit 1; fi
+    sleep 1
+    ((TIMEOUT--))
+done
+echo "PipeWire Core is ready."
+
+# 3. Start WirePlumber (Session Manager)
+# Only start this AFTER the socket is confirmed
+echo "Starting WirePlumber..."
+su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
+
+# Give WirePlumber a moment to claim the bus name
 sleep 2
 
-# 3. Launch WirePlumber (Session Manager)
-# We launch this second so it finds a healthy Core
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/wireplumber" &
+# 4. Start PulseAudio Compatibility
+echo "Starting PipeWire-Pulse..."
+su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 
-# 4. Launch PipeWire-Pulse (PulseAudio Compatibility)
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
+# WAIT LOOP: Block until pulse native socket exists
+echo "Waiting for PulseAudio socket..."
+TIMEOUT=10
+while [ ! -S "$XDG_RUNTIME_DIR/pulse/native" ]; do
+    if [ $TIMEOUT -le 0 ]; then echo "Error: Pulse socket failed to appear"; exit 1; fi
+    sleep 1
+    ((TIMEOUT--))
+done
+echo "PulseAudio is ready."
 
-# Wait for sockets to be ready
-sleep 2
-
-# 5. Grant Access to Root (Sunshine)
-# We simply chmod the socket so Root can read/write it.
-# This is safe because we are inside a container.
+# 5. Grant Access
 chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
 
 # 6. Create Sink
@@ -100,7 +118,6 @@ su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
 
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
-               
 # --- 6. Proton / Compatibility Tools Fix ---
 echo "Linking Proton versions..."
 
