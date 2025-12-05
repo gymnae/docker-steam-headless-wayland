@@ -29,24 +29,32 @@ mkdir -p $XDG_RUNTIME_DIR
 chmod 0700 $XDG_RUNTIME_DIR
 chown steam:steam $XDG_RUNTIME_DIR
 
+# --- 3. System Services (DBus + RTKit) ---
+echo "Starting System DBus..."
 mkdir -p /run/dbus
+rm -f /run/dbus/pid
 dbus-daemon --system --fork
 
+echo "Starting RTKit..."
+if [ -x /usr/lib/rtkit-daemon ]; then
+    # FIX: Max (85) must be lower than Our (90)
+    /usr/lib/rtkit-daemon --our-realtime-priority=90 --max-realtime-priority=85 &
+fi
+
 echo "Starting Session DBus..."
-# Run DBus as steam
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
 su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork --nopidfile"
 sleep 1
 export DBUS_SESSION_BUS_ADDRESS
 
-# --- 3. Start UDEV ---
+# --- 4. UDEV ---
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon
     udevadm trigger
 fi
 
-# --- 4. Seatd ---
+# --- 5. Seatd ---
 echo "Starting seatd..."
 seatd & 
 export LIBSEAT_BACKEND=seatd
