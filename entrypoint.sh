@@ -143,7 +143,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
     -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
     --force-grab-cursor \
-    --steam
+    --steam \
     -- \
     steam -gamepadui -noverifyfiles &
 
