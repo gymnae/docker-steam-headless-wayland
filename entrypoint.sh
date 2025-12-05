@@ -61,33 +61,29 @@ export LIBSEAT_BACKEND=seatd
 sleep 1
 chmod 777 /run/seatd.sock
 
-# --- 5. Audio Stack (High Quality / Stable Latency) ---
+# --- 6. Audio Stack (Socket Mode) ---
 echo "Starting Audio..."
-
-# TUNING: Now that RTKit is fixed, we can try aggressive settings again.
-# 512/48000 = ~10ms latency (Ultra Low)
-# If this crackles, go back to 1024.
-export PIPEWIRE_LATENCY="512/48000" 
-
-# Pass System Bus address to PipeWire so it can find RTKit
+# Try 512 (10ms). If it crackles without TCP, bump to 1024.
+export PIPEWIRE_LATENCY="512/48000"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 
+# Start PipeWire
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
 sleep 3
 
-# TCP Audio Setup
-echo "Configuring PulseAudio..."
-su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
-               pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"
-
+# Create Sink (Standard Socket)
+echo "Configuring PulseAudio Sink..."
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo rate=48000 sink_properties=device.description=Sunshine_Stereo"
 
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
+
+# Ensure socket is accessible to Root (Sunshine)
+chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
                
 # --- 6. Proton / Compatibility Tools Fix ---
 echo "Linking Proton versions..."
