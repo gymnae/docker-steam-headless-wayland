@@ -61,29 +61,45 @@ export LIBSEAT_BACKEND=seatd
 sleep 1
 chmod 777 /run/seatd.sock
 
-# --- 6. Audio Stack (Socket Mode) ---
+# --- 5. Audio Stack (Socket Mode - Fixed) ---
 echo "Starting Audio..."
-# Try 512 (10ms). If it crackles without TCP, bump to 1024.
 export PIPEWIRE_LATENCY="512/48000"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 
-# Start PipeWire
+# 1. Pre-create Pulse directory with correct permissions
+# This prevents the "Access Denied" error when PipeWire tries to create the socket
+mkdir -p $XDG_RUNTIME_DIR/pulse
+chown -R steam:steam $XDG_RUNTIME_DIR/pulse
+chmod 700 $XDG_RUNTIME_DIR/pulse
+
+# 2. Launch PipeWire (The Core)
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire" &
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
+
+# Wait for PipeWire core to initialize
+sleep 2
+
+# 3. Launch WirePlumber (Session Manager)
+# We launch this second so it finds a healthy Core
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-sleep 3
+# 4. Launch PipeWire-Pulse (PulseAudio Compatibility)
+su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
 
-# Create Sink (Standard Socket)
+# Wait for sockets to be ready
+sleep 2
+
+# 5. Grant Access to Root (Sunshine)
+# We simply chmod the socket so Root can read/write it.
+# This is safe because we are inside a container.
+chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
+
+# 6. Create Sink
 echo "Configuring PulseAudio Sink..."
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo rate=48000 sink_properties=device.description=Sunshine_Stereo"
 
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
-
-# Ensure socket is accessible to Root (Sunshine)
-chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
                
 # --- 6. Proton / Compatibility Tools Fix ---
 echo "Linking Proton versions..."
