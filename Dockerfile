@@ -12,6 +12,7 @@ RUN pacman -Syu --noconfirm && \
     nvidia-utils \
     lib32-nvidia-utils \
     libva-nvidia-driver \
+    rtkit \
     # Gaming Stack
     steam \
     sunshine \
