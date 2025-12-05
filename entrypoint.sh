@@ -59,9 +59,9 @@ echo "Starting Audio..."
 # TUNING:
 # 2048/48000 = ~42ms latency. Removes "choppiness" (underruns).
 # force-rate=48000: Prevents low-quality resampling if a game tries 44.1kHz.
-export PIPEWIRE_LATENCY="2048/48000"
-export PIPEWIRE_RATE="48000"
-export PIPEWIRE_QUANTUM="2048"
+#export PIPEWIRE_LATENCY="2048/48000"
+# export PIPEWIRE_RATE="48000"
+# export PIPEWIRE_QUANTUM="2048"
 
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire" &
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
