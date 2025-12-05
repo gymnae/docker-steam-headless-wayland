@@ -142,7 +142,6 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
     -W "$WIDTH" -H "$HEIGHT" \
     -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
-    -F fsr \
     --force-grab-cursor \
     -steam
     -- \
