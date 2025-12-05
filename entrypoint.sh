@@ -92,19 +92,18 @@ if [ -z "$FOUND_SOCKET" ]; then echo "Error: Wayland socket missing"; exit 1; fi
 export WAYLAND_DISPLAY=$FOUND_SOCKET
 echo "Wayland socket found: $WAYLAND_DISPLAY"
 chmod 777 $XDG_RUNTIME_DIR/$FOUND_SOCKET
-
-# --- 8. Start Sunshine (ROOT MODE) ---
+# --- 8. Start Sunshine (ROOT MODE with Audio Fix) ---
 echo "Starting Sunshine (Root Mode)..."
 mkdir -p /root/.config
 ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
-# CONFIG: Set gamepad to 'auto' for native passthrough
+# Ensure sunshine.conf allows "auto" gamepads
+mkdir -p /home/steam/.config/sunshine
 cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
 [general]
 address = 0.0.0.0
 port = 47990
 upnp = disabled
-# AUTO: Detects DS4/DS5/Switch/Xbox automatically
 gamepad = auto
 [video]
 capture = kms
@@ -114,12 +113,13 @@ audio_sink = pulse
 EOF
 chown steam:steam /home/steam/.config/sunshine/sunshine.conf
 
+# PulseAudio Cookie Fix
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
     cp /home/steam/.config/pulse/cookie /root/.config/pulse/cookie
 fi
 
-# WATCHDOG
+# WATCHDOG (Background)
 (
     LAST_COUNT=0
     while true; do
@@ -129,23 +129,37 @@ fi
             LAST_COUNT=$NEW_COUNT
         fi
         
-        # Ensure new devices are accessible
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         chmod 666 /dev/hidraw* 2>/dev/null
         chmod 666 /dev/uhid 2>/dev/null
         
-        # Keep Audio Default
-        su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-default sink-sunshine-stereo" 2>/dev/null
-        su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0" 2>/dev/null
-        
         sleep 5
     done
 ) &
 
+# --- AUDIO PRE-FLIGHT CHECK ---
+# We must create the sink BEFORE Sunshine starts so we can bind to it.
+echo "Initializing Audio Sink..."
+
+# 1. Define Socket
 export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
 export XDG_SEAT=seat0 
 
+# 2. Create the Sink Manually (as steam user)
+su - steam -c "export PULSE_SERVER=$PULSE_SERVER && \
+               pactl load-module module-null-sink sink_name=sunshine-stereo sink_properties=device.description=Sunshine_Stereo"
+
+# 3. Set it as Default (as steam user)
+su - steam -c "export PULSE_SERVER=$PULSE_SERVER && \
+               pactl set-default-sink sunshine-stereo"
+
+# 4. Launch Sunshine with Explicit Source
+# The monitor source for a null sink is always 'sink_name.monitor'
+export PULSE_SOURCE="sunshine-stereo.monitor"
+export PULSE_SINK="sunshine-stereo"
+
+echo "Launching Sunshine attached to $PULSE_SOURCE..."
 sunshine &
 
 # --- 9. Keep Alive ---
