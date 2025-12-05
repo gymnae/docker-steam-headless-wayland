@@ -144,6 +144,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
     -r "$REFRESH" \
     -F fsr \
     --force-grab-cursor \
+    -steam
     -- \
     steam -gamepadui -noverifyfiles &
 
