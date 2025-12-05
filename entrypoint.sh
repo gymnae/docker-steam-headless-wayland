@@ -91,11 +91,10 @@ echo "PipeWire Core is ready."
 # 3. Start WirePlumber (Session Manager)
 # FIX: Removed DBUS_SYSTEM_BUS_ADDRESS from WirePlumber env to prevent RTKit confusion crashing the loop
 echo "Starting WirePlumber..."
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && /usr/bin/wireplumber" &
+su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR && /usr/bin/wireplumber" &
 
-# Give WirePlumber a moment to claim the bus name
+# Give WirePlumber a moment
 sleep 2
-
 # 4. Start PulseAudio Compatibility
 echo "Starting PipeWire-Pulse..."
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
