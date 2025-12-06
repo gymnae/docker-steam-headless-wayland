@@ -7,8 +7,11 @@ trap "echo 'Stopping container...'; killall -15 sunshine gamescope steam seatd p
 # --- 1. GLOBAL SETUP ---
 echo "Initializing Container..."
 
-# Permissions
-mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
+# Create Dirs
+mkdir -p /home/steam/.config/sunshine /home/steam/.steam /home/steam/.local/state
+
+# Fix Permissions (Recursive)
+# We force ownership to steam:steam so the container can read the bind mount
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
 chmod 666 /dev/dri/card0 2>/dev/null || true
@@ -47,41 +50,25 @@ if [ -x /usr/lib/systemd/systemd-udevd ]; then
     udevadm trigger
 fi
 
-# --- 2. AUDIO STACK (Reverted to 'Known Good' Simple Sequence) ---
+# Audio Stack
 echo "Starting Audio..."
 export PIPEWIRE_LATENCY="512/48000"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 
-# Start services sequentially to ensure socket creation
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire" &
-sleep 1
-su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/wireplumber" &
-sleep 1
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire-pulse" &
+su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/wireplumber" &
 
-# Wait for socket
 sleep 2
 
-# Create Sink
-echo "Configuring PulseAudio Sink..."
+# Audio Sink
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo rate=48000 sink_properties=device.description=Sunshine_Stereo"
-
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
-
-# Grant Root Access
 chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
 
-# --- 3. SEATD ---
-echo "Starting seatd..."
-seatd & 
-export LIBSEAT_BACKEND=seatd
-sleep 1
-chmod 777 /run/seatd.sock
-
-# --- 4. CONFIG & LINKS ---
-echo "Linking Proton versions..."
+# Proton Links
 mkdir -p /home/steam/.steam/root/compatibilitytools.d
 if [ -d "/usr/share/steam/compatibilitytools.d" ]; then
     find /usr/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
@@ -89,11 +76,18 @@ if [ -d "/usr/share/steam/compatibilitytools.d" ]; then
 fi
 chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
 
-# Config Generation
-mkdir -p /home/steam/.config/sunshine
-if [ ! -f "/home/steam/.config/sunshine/sunshine.conf" ]; then
-    echo "Generating default Sunshine config..."
-    cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
+# --- CONFIG PERSISTENCE CHECK ---
+CONF_DIR="/home/steam/.config/sunshine"
+CONF_FILE="$CONF_DIR/sunshine.conf"
+
+echo "Checking Sunshine Config at: $CONF_FILE"
+
+if [ -s "$CONF_FILE" ]; then
+    echo "✅ Existing config found ($(stat -c%s "$CONF_FILE") bytes). Keeping it."
+else
+    echo "⚠️  Config missing or empty. Writing default..."
+    mkdir -p "$CONF_DIR"
+    cat > "$CONF_FILE" <<EOF
 [general]
 address = 0.0.0.0
 upnp = disabled
@@ -103,7 +97,15 @@ capture = kms
 encoder = nvenc
 EOF
 fi
-chown steam:steam /home/steam/.config/sunshine/sunshine.conf
+
+# Ensure permissions are correct again after potential write
+chown -R steam:steam "$CONF_DIR"
+
+# Link for Root (Sunshine runs as root)
+rm -rf /root/.config/sunshine
+mkdir -p /root/.config
+# We link the FOLDER, not the file, so Sunshine sees apps.json too
+ln -sfn /home/steam/.config/sunshine /root/.config/sunshine
 
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
@@ -119,6 +121,7 @@ fi
             udevadm trigger --action=change --subsystem-match=input
             LAST_COUNT=$NEW_COUNT
         fi
+        
         chmod 666 /dev/input/event* 2>/dev/null
         chmod 666 /dev/input/js* 2>/dev/null
         chmod 666 /dev/hidraw* 2>/dev/null
@@ -135,12 +138,14 @@ fi
 # --- SESSION LOOP ---
 # ==============================================================================
 
+# DUALSENSE MAPPING
 export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 030000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
-050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
+030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 050000004c050000c405000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
 
+# Socket Variables
 export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
 export PULSE_SOURCE="sunshine-stereo.monitor"
 export PULSE_SINK="sunshine-stereo"
@@ -149,7 +154,25 @@ export XDG_SEAT=seat0
 while true; do
     echo "--- Starting Session ---"
 
-    # 1. Start Gamescope
+    # 1. Cleanup Zombies (PID File Fix)
+    # We must remove the steam.pid file or Steam thinks it's still running
+    rm -f /home/steam/.steam/steam.pid 2>/dev/null
+    rm -f /home/steam/.steam/root/steam.pid 2>/dev/null
+    
+    pkill -9 -u steam steam || true
+    pkill -9 -u steam steamwebhelper || true
+    rm -f /run/seatd.sock
+
+    # 2. Restart Seatd
+    # Kill old instance if it exists
+    killall seatd 2>/dev/null || true
+    seatd &
+    SEATD_PID=$!
+    export LIBSEAT_BACKEND=seatd
+    sleep 1
+    chmod 777 /run/seatd.sock
+
+    # 3. Start Gamescope
     sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
         SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
         UG_MAX_BUFFERS=256 \
@@ -164,7 +187,7 @@ while true; do
     
     GS_PID=$!
     
-    # 2. Wait for Socket
+    # 4. Wait for Socket
     TIMEOUT=30
     while [ ! -S "$XDG_RUNTIME_DIR/gamescope-0" ] && [ $TIMEOUT -gt 0 ]; do
         sleep 0.5
@@ -173,14 +196,14 @@ while true; do
     export WAYLAND_DISPLAY=gamescope-0
     chmod 777 $XDG_RUNTIME_DIR/gamescope-0 2>/dev/null || true
     
-    # 3. Start Sunshine
+    # 5. Start Sunshine
     if [ -S "$XDG_RUNTIME_DIR/gamescope-0" ]; then
         echo "Starting Sunshine..."
         sunshine &
         SUNSHINE_PID=$!
     fi
     
-    # 4. Monitor Steam
+    # 6. Monitor Steam
     sleep 15
     echo "Monitoring Steam process..."
     while kill -0 $GS_PID 2>/dev/null; do
@@ -191,28 +214,10 @@ while true; do
         sleep 3
     done
     
-    # 5. CLEANUP
-    echo "Session ended. Resetting..."
+    # 7. Teardown
+    echo "Session ended. Cleaning up..."
     kill $GS_PID 2>/dev/null || true
     kill $SUNSHINE_PID 2>/dev/null || true
     
-    # GENTLE CLEANUP (Allows Steam to release locks)
-    pkill -15 -u steam steam || true
-    pkill -15 -u steam steamwebhelper || true
-    sleep 2
-    # FORCE CLEANUP
-    pkill -9 -u steam steam || true
-    pkill -9 -u steam steamwebhelper || true
-    pkill -9 -u steam gameoverlayui || true
-    
-    # Restart Seatd (Crucial for GPU Reset)
-    killall seatd || true
-    rm -f /run/seatd.sock
-    seatd &
-    export LIBSEAT_BACKEND=seatd
-    sleep 1
-    chmod 777 /run/seatd.sock
-    
-    rm -f $XDG_RUNTIME_DIR/gamescope-0
-    sleep 2
+    sleep 3
 done
