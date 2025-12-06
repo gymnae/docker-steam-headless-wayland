@@ -88,9 +88,14 @@ if [ -d "/usr/share/steam/compatibilitytools.d" ]; then
 fi
 chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
 
-# CONFIG GENERATION
+# CONFIG GENERATION (Fixed for Persistence)
 mkdir -p /home/steam/.config/sunshine
-cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
+
+# Only write default config if the file is missing.
+# This prevents overwriting your custom settings/pairing state on restart.
+if [ ! -f "/home/steam/.config/sunshine/sunshine.conf" ]; then
+    echo "Generating default Sunshine config..."
+    cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
 [general]
 address = 0.0.0.0
 upnp = disabled
@@ -99,7 +104,9 @@ gamepad = auto
 capture = kms
 encoder = nvenc
 EOF
-chown steam:steam /home/steam/.config/sunshine/sunshine.conf
+fi
+
+chown -R steam:steam /home/steam/.config/sunshine
 
 if [ -f /home/steam/.config/pulse/cookie ]; then
     mkdir -p /root/.config/pulse
