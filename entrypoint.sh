@@ -64,7 +64,7 @@ chmod 777 /run/seatd.sock
 
 # --- 5. Audio Stack (Socket Mode - Fixed) ---
 echo "Starting Audio..."
-export PIPEWIRE_LATENCY="512/48000"
+export PIPEWIRE_LATENCY="512"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
 
@@ -115,7 +115,7 @@ chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
 # 6. Create Sink
 echo "Configuring PulseAudio Sink..."
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
-               pactl load-module module-null-sink sink_name=sunshine-stereo rate=48000 sink_properties=device.description=Sunshine_Stereo"
+               pactl load-module module-null-sink sink_name=sunshine-stereo sink_properties=device.description=Sunshine_Stereo"
 
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
