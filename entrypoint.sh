@@ -47,9 +47,8 @@ if [ -x /usr/lib/systemd/systemd-udevd ]; then
 fi
 
 # Audio Stack (Persistent)
-# We keep Audio running globally because restarting it causes popping/delays
 echo "Starting Audio..."
-export PIPEWIRE_LATENCY="512/48000"
+export PIPEWIRE_LATENCY="1024/48000"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 
 su - steam -c "export HOME=/home/steam && export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && export DBUS_SESSION_BUS_ADDRESS='$DBUS_SESSION_BUS_ADDRESS' && export DBUS_SYSTEM_BUS_ADDRESS='$DBUS_SYSTEM_BUS_ADDRESS' && /usr/bin/pipewire" &
@@ -73,9 +72,11 @@ if [ -d "/usr/share/steam/compatibilitytools.d" ]; then
 fi
 chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
 
-# Sunshine Config
+# --- CONFIG GENERATION (Robust Fix) ---
 mkdir -p /home/steam/.config/sunshine
-if [ ! -f "/home/steam/.config/sunshine/sunshine.conf" ]; then
+# Only generate if file doesn't exist OR is empty (size 0)
+if [ ! -s "/home/steam/.config/sunshine/sunshine.conf" ]; then
+    echo "Generating default Sunshine config..."
     cat > /home/steam/.config/sunshine/sunshine.conf <<EOF
 [general]
 address = 0.0.0.0
@@ -121,8 +122,8 @@ fi
 # Input Mapping
 export SDL_GAMECONTROLLERCONFIG="050000004c050000c405000000850000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
-030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
-030000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
+030000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
+030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
 
 # Socket Variables
 export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
@@ -134,7 +135,6 @@ while true; do
     echo "--- Starting Session ---"
 
     # 1. Start Seatd (FRESH INSTANCE)
-    # This resets the DRM Master state so the new Gamescope can grab the GPU.
     rm -f /run/seatd.sock
     seatd &
     SEATD_PID=$!
@@ -143,7 +143,6 @@ while true; do
     chmod 777 /run/seatd.sock
 
     # 2. Start Gamescope
-    # --force-composition: Fixes "liftoff" permission errors by bypassing hardware planes
     sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 \
         SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
         UG_MAX_BUFFERS=256 \
@@ -175,23 +174,31 @@ while true; do
         SUNSHINE_PID=$!
     fi
     
-    # 5. Monitor Steam Process
-    sleep 15
-    echo "Monitoring Steam process..."
-    while kill -0 $GS_PID 2>/dev/null; do
-        if ! pgrep -u steam -x steam > /dev/null && ! pgrep -u steam -x steam-runtime > /dev/null; then
-            echo "Steam process not found. Restarting session..."
+    # 5. MONITOR STEAM (The Restart Fix)
+    # We loop here and verify Steam is still alive.
+    sleep 10 # Allow time for Steam bootstrap
+    
+    while true; do
+        # Check if Gamescope is alive
+        if ! kill -0 $GS_PID 2>/dev/null; then
+            echo "Gamescope exited."
             break
         fi
-        sleep 3
+        
+        # Check if Steam is alive (PID check user steam)
+        # We look for ANY steam process. If 0 found, Steam quit/restarting.
+        if ! pgrep -u steam -x steam > /dev/null && ! pgrep -u steam -x steam-runtime > /dev/null; then
+             echo "Steam process disappeared (Restarting/Exited). Resetting session..."
+             break
+        fi
+        
+        sleep 2
     done
     
-    # 6. CLEANUP (The Fix for "Permission Denied")
-    echo "Session ended. Resetting..."
+    # 6. CLEANUP
+    echo "Tearing down session..."
     kill $GS_PID 2>/dev/null || true
     kill $SUNSHINE_PID 2>/dev/null || true
-    
-    # Kill seatd to release DRM Master lock
     kill $SEATD_PID 2>/dev/null || true
     rm -f $XDG_RUNTIME_DIR/gamescope-0
     
