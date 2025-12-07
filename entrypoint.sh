@@ -153,6 +153,10 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     -r "$REFRESH" \
     --force-grab-cursor \
     --steam \
+    --hdr-enabled \
+    --hdr-itm-enable \
+    --expose-wayland \
+    --hdr-sdr-content-nits 400 \
     -- \
     steam -gamepadui -noverifyfiles &
 
