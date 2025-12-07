@@ -15,6 +15,9 @@ RUN pacman -Syu --noconfirm && \
     rtkit \
     # Gaming Stack
     steam \
+    ntsync \
+    ffmpeg \
+    cuda \
     sunshine \
     proton-cachyos \
     # Audio (64-bit AND 32-bit required for Steam)
