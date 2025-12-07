@@ -15,7 +15,6 @@ RUN pacman -Syu --noconfirm && \
     rtkit \
     # Gaming Stack
     steam \
-    ntsync \
     ffmpeg \
     cuda \
     sunshine \
