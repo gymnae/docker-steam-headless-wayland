@@ -148,7 +148,6 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
     UG_MAX_BUFFERS=256 \
     gamescope -e \
-    --backend wayland \
     -W "$WIDTH" -H "$HEIGHT" \
     -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
@@ -191,7 +190,7 @@ address = 0.0.0.0
 upnp = disabled
 gamepad = auto
 [video]
-capture = wayland
+capture = kms
 encoder = nvenc
 hevc_mode = 1
 EOF
