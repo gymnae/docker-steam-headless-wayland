@@ -155,9 +155,8 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     --hdr-enabled \
     --hdr-debug-force-output \
     --hdr-itm-enable \
-    --expose-wayland \
     -- \
-    steam -pipewire -gamepadui -noverifyfiles &
+    steam -gamepadui -noverifyfiles &
 
 GS_PID=$!
 
@@ -192,7 +191,6 @@ gamepad = auto
 [video]
 capture = kms
 encoder = nvenc
-hevc_mode = 1
 EOF
 chown steam:steam /home/steam/.config/sunshine/sunshine.conf
 
