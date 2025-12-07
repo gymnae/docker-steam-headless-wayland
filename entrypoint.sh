@@ -64,7 +64,7 @@ chmod 777 /run/seatd.sock
 
 # --- 5. Audio Stack (Socket Mode - Fixed) ---
 echo "Starting Audio..."
-export PIPEWIRE_LATENCY=256/48000      # Example: PIPEWIRE_LATENCY=2048/48000
+export PIPEWIRE_LATENCY=64/48000      # Example: PIPEWIRE_LATENCY=2048/48000
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
 
