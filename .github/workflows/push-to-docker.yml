@@ -13,6 +13,17 @@ jobs:
       - 
         name: Checkout
         uses: actions/checkout@v4
+      - 
+        name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -41,8 +52,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: gymnae/steam-headless:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,new=true
+          cache-from: type=gha
+          cache-to: type=gha,modex=max
           
   workflow-keepalive:
     if: github.event_name == 'schedule'
