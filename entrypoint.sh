@@ -152,7 +152,6 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
     --force-grab-cursor \
-    --hdr-debug-force-support \
     --hdr-enabled \
     --hdr-itm-enable \
     --expose-wayland \
