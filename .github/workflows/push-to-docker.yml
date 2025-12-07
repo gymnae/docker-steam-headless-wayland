@@ -38,7 +38,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: gymnae/steam-headless:latest
           cache-from: type=local,src=/tmp/.buildx-cache
