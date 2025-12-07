@@ -4,14 +4,46 @@ services:
     network_mode: host # Required for Steam/Sunshine local discovery
     privileged: true    # Required to take DRM Master of the dummy plug
     ipc: host           # Performance
+    shm_size: '8gb'
+    ulimits:
+      rtprio: 99      # <--- REQUIRED: Allow Realtime Priority 99
+      memlock: -1     # <--- REQUIRED: Allow unlimited locked memory
+      nofile:
+	soft: 524288
+        hard: 524288
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_NICE
+      - IPC_LOCK
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
     volumes:
+      - ./steam-config:/home/steam/.steam
       - ./steam-data:/home/steam/.local/share/Steam
       - ./sunshine-conf:/home/steam/.config/sunshine
-      - /run/udev:/run/udev:ro
+      - /dev/input:/dev/input
     devices:
-      - /dev/dri:/dev/dri  # The Dummy Plug lives here!
-      - /dev/input:/dev/input # Gamepads
+      - /dev/fuse
+      - /dev/uinput
+      - /dev/uhid
+      - /dev/hidraw
+      - /dev/dri/renderD129
+      - /dev/dri/card0
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-modeset
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+      - /dev/nvidia-caps/nvidia-cap1
+      - /dev/nvidia-caps/nvidia-cap2
+    device_cgroup_rules:
+      - 'c 13:* rmw'
+      - 'c 10:223 rmw' 
     environment:
       - PUID=1000
       - PGID=1000
-      - XDG_RUNTIME_DIR=/run/user/1000
+      - WIDTH=1920   # Change to 2560, 3840, etc.
+      - HEIGHT=1080  # Change to 1440, 2160, etc.
+      - REFRESH=60   # Change to 120, 144, etc.
