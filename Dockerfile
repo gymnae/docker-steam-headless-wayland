@@ -16,7 +16,6 @@ RUN pacman -Syu --noconfirm && \
     # Gaming Stack
     steam \
     ffmpeg \
-    cuda \
     sunshine \
     proton-cachyos \
     # Audio (64-bit AND 32-bit required for Steam)
