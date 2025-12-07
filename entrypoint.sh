@@ -148,6 +148,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
     UG_MAX_BUFFERS=256 \
     gamescope -e \
+    --headless \
     -W "$WIDTH" -H "$HEIGHT" \
     -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
@@ -192,6 +193,7 @@ gamepad = auto
 [video]
 capture = kms
 encoder = nvenc
+hevc_mode = 1
 EOF
 chown steam:steam /home/steam/.config/sunshine/sunshine.conf
 
