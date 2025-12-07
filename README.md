@@ -4,6 +4,8 @@
 ![OS](https://img.shields.io/badge/Base-CachyOS-cyan)
 ![Stack](https://img.shields.io/badge/Tech-Wayland%20%7C%20Gamescope%20%7C%20PipeWire-pink)
 ![Builder](https://img.shields.io/badge/Coded%20By-AI%20(LLM)-blueviolet)
+![Docker](https://img.shields.io/badge/Docker%20Hub?logo=docker&labelColor=blue&link=https%3A%2F%2Fhub.docker.com%2Fr%2Fgymnae%2Fsteam-headless)
+
 
 ## ⚠️ The "I Don't Know How To Code" Disclaimer
 
