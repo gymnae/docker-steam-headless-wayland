@@ -48,7 +48,12 @@ su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork 
 sleep 1
 export DBUS_SESSION_BUS_ADDRESS
 
-# --- 3. Start UDEV ---
+# --- 3. Start RTKit & UDEV ---
+echo "Starting RTKit..."
+if [ -x /usr/lib/rtkit-daemon ]; then
+    /usr/lib/rtkit-daemon --our-realtime-priority=90 --max-realtime-priority=85 &
+fi
+
 if [ -x /usr/lib/systemd/systemd-udevd ]; then
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon
