@@ -156,7 +156,7 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     --hdr-debug-force-output \
     --hdr-itm-enable \
     -- \
-    steam -gamepadui -noverifyfiles &
+    steam -noverifyfiles &
 
 GS_PID=$!
 
