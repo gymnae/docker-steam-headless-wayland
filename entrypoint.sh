@@ -147,13 +147,12 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller
 sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headless \
     SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" \
     UG_MAX_BUFFERS=256 \
-    gamescope -e \
+    gamescope \
     -W "$WIDTH" -H "$HEIGHT" \
     -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
     --force-grab-cursor \
     --hdr-enabled \
-    --hdr-debug-force-output \
     --hdr-itm-enable \
     -- \
     steam -noverifyfiles &
