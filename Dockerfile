@@ -55,7 +55,7 @@ RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
+RUN useradd -r -g rtkit -s /sbin/nologin rtkit || true
 USER root
 WORKDIR /home/steam
 ENV PROTON_LOG=1
