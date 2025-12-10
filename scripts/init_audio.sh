@@ -4,25 +4,30 @@ set -e
 echo "--- [Audio] Initializing Audio Stack ---"
 
 # Settings
-export PIPEWIRE_LATENCY="128/48000"
-export PIPEWIRE_QUANTUM="128/48000"
-export PIPEWIRE_MIN_QUANTUM="128/48000"
-export PIPEWIRE_MAX_QUANTUM="128/48000"
+export PIPEWIRE_LATENCY="256/48000"
+export PIPEWIRE_QUANTUM="256/48000"
+export PIPEWIRE_MIN_QUANTUM="256/48000"
+export PIPEWIRE_MAX_QUANTUM="256/48000"
 export PIPEWIRE_RATE="48000"
 export PIPEWIRE_RESAMPLE_QUALITY="4"
 export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
+export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
 
-# Cleanup
+# Cleanup & Preparation
 rm -rf $XDG_RUNTIME_DIR/pipewire-* $XDG_RUNTIME_DIR/pulse
 rm -rf /home/steam/.local/state/wireplumber
 mkdir -p $XDG_RUNTIME_DIR/pulse
-chown -R steam:steam $XDG_RUNTIME_DIR/pulse
+chown -R steam:steam $XDG_RUNTIME_DIR
 chmod 700 $XDG_RUNTIME_DIR/pulse
 
 # 1. Start Core (High Priority)
 echo "Starting PipeWire Core..."
-# FIX: Removed '--reset-env' so XDG_RUNTIME_DIR is preserved
-nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- /usr/bin/pipewire &
+# FIX: Pass PIPEWIRE_RUNTIME_DIR so it knows where to put sockets
+nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- \
+    env HOME=/home/steam \
+        XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+        PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+    /usr/bin/pipewire &
 
 # Wait for Socket
 TIMEOUT=10
@@ -34,12 +39,20 @@ done
 
 # 2. Start WirePlumber
 echo "Starting WirePlumber..."
-nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- /usr/bin/wireplumber &
+nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- \
+    env HOME=/home/steam \
+        XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+        PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+    /usr/bin/wireplumber &
 sleep 2
 
 # 3. Start PulseAudio Compat
 echo "Starting PipeWire-Pulse..."
-nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- /usr/bin/pipewire-pulse &
+nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- \
+    env HOME=/home/steam \
+        XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+        PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+    /usr/bin/pipewire-pulse &
 
 # Wait for Pulse Socket
 TIMEOUT=10
