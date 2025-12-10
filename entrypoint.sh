@@ -26,6 +26,26 @@ chmod 666 /dev/uinput
 if [ ! -e /dev/tty0 ]; then mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0; fi
 if [ ! -e /dev/tty1 ]; then mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1; fi
 
+# --- 1.5 LOCALIZATION ---
+if [ -n "$GENERATE_LOCALE" ]; then
+    echo "Configuring Locale: $GENERATE_LOCALE"
+    # Uncomment the requested locale in /etc/locale.gen
+    sed -i "s/# $GENERATE_LOCALE/$GENERATE_LOCALE/" /etc/locale.gen
+    # Generate it
+    locale-gen
+    export LANG="$GENERATE_LOCALE"
+    export LC_ALL="$GENERATE_LOCALE"
+    echo "Locale set to $LANG"
+fi
+
+if [ -n "$KEYBOARD_LAYOUT" ]; then
+    echo "Setting Keyboard Layout: $KEYBOARD_LAYOUT"
+    # Standard Wayland environment variables for Input
+    export XKB_DEFAULT_LAYOUT="$KEYBOARD_LAYOUT"
+    export XKB_DEFAULT_VARIANT="${KEYBOARD_VARIANT:-}"
+    # Also tell Steam explicitly if needed (though it usually respects system LANG)
+fi
+
 # --- 2. Runtime Environment ---
 export XDG_RUNTIME_DIR=/run/user/1000
 mkdir -p $XDG_RUNTIME_DIR
