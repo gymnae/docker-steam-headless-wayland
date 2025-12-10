@@ -53,9 +53,15 @@ RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
     setcap 'cap_sys_admin,cap_net_admin+p' $(readlink -f /usr/bin/sunshine) && \
     setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
 
+
+RUN useradd -r -g rtkit -s /sbin/nologin rtkit || true
+
+COPY scripts/ /usr/local/bin/scripts/
+RUN chmod +x /usr/local/bin/scripts/*.sh
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-RUN useradd -r -g rtkit -s /sbin/nologin rtkit || true
+
 USER root
 WORKDIR /home/steam
 ENV PROTON_LOG=1
