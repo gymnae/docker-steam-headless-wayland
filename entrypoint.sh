@@ -125,13 +125,23 @@ su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl set-default-sink sunshine-stereo"
 
-# --- 6. Proton Linking ---
+# --- 6. Proton Linking (FIXED) ---
 echo "Linking Proton versions..."
 mkdir -p /home/steam/.steam/root/compatibilitytools.d
+
+# FORCE FIX: Recursively own the installed tools by 'steam' user
+# This fixes both 'root' owned proton-cachyos and '1001' owned GE-Proton
 if [ -d "/usr/share/steam/compatibilitytools.d" ]; then
+    echo "Forcing ownership of /usr/share/steam/compatibilitytools.d to steam:steam..."
+    chown -R steam:steam /usr/share/steam/compatibilitytools.d
+    chmod -R u+rwX,go+rX /usr/share/steam/compatibilitytools.d
+    
+    # Create symlinks
     find /usr/share/steam/compatibilitytools.d/ -maxdepth 1 -mindepth 1 -type d \
     -exec ln -sfn {} /home/steam/.steam/root/compatibilitytools.d/ \;
 fi
+
+# Ensure the destination link folder is also owned by steam
 chown -R steam:steam /home/steam/.steam/root/compatibilitytools.d
 
 # --- 7. Gamescope ---
