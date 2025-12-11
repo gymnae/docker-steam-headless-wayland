@@ -59,7 +59,6 @@ sudo -E -u steam HOME=/home/steam WLR_LIBINPUT_NO_DEVICES=1 WLR_BACKENDS=headles
     UG_MAX_BUFFERS=256 \
     gamescope -e \
     -W "$WIDTH" -H "$HEIGHT" \
-    -w "$WIDTH" -h "$HEIGHT" \
     -r "$REFRESH" \
     --force-grab-cursor \
     --hdr-enabled \
