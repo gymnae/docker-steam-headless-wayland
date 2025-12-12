@@ -15,7 +15,7 @@ address = 0.0.0.0
 upnp = disabled
 gamepad = auto
 [video]
-capture = wayland
+capture = kms
 encoder = nvenc
 EOF
 fi
