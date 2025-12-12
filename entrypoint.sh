@@ -10,8 +10,8 @@ rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid 2>/d
 echo "--- [Boot] Setting Environment & Permissions ---"
 
 # Set defaults
-WIDTH=${WIDTH:-1920}
-HEIGHT=${HEIGHT:-1080}
+WIDTH=${WIDTH:-2560}
+HEIGHT=${HEIGHT:-1440}
 REFRESH=${REFRESH:-60}
 
 # Set vars first
@@ -46,7 +46,7 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller
 050000004c050000c405000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,"
 
 
-exec steam -noverifyfiles -gamepadui
+exec steam -gamepadui -noverifyfiles -w $WIDTH -h $HEIGHT
 EOF
 chmod +x /usr/local/bin/start_steam.sh
 chown steam:steam /usr/local/bin/start_steam.sh
@@ -80,7 +80,17 @@ while true; do
     echo "    >>> DETECTED MODE: '$DISPLAY_MODE' <<<"
 
     # B. BUILD ARGUMENTS
-    GS_ARGS=( "-e" "-W" "$WIDTH" "-H" "$HEIGHT" "-f" "--rt" "--force-grab-cursor" "--adaptive-sync" "--mangoapp" "--force-windows-fullscreen" )
+    GS_ARGS=( \
+	"-e" \
+	"-f" \
+	"--force-windows-fullscreen" \
+	"-w" "$WIDTH" \
+	"-h" "$HEIGHT" \
+        "-W" "$WIDTH" \
+        "-H" "$HEIGHT" \
+	"-r" "$REFRESH" \
+	"--force-grab-cursor" \
+	)
     
     if [ "$DISPLAY_MODE" = "HDR" ]; then
         echo "    [Config] Applying HDR Flags..."

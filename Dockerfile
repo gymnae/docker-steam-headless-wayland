@@ -65,6 +65,6 @@ RUN chmod +x /entrypoint.sh
 
 USER root
 WORKDIR /home/steam
-ENV PROTON_LOG=1
+#ENV PROTON_LOG=1
 
 ENTRYPOINT ["/entrypoint.sh"]
