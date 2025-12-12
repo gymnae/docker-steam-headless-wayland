@@ -25,7 +25,6 @@ chown steam:steam "$CONF_FILE"
 # 'prep-cmd' runs before the stream starts. We use it to switch modes.
 # We set 'image-path' to empty for now to force Moonlight to generate a text-based placeholder if no image is found,
 # which helps distinguish them if you don't have custom cover art.
-
 cat > "$APPS_FILE" <<EOF
 {
     "env": {

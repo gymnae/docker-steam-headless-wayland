@@ -36,17 +36,6 @@ done
 mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
 chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
 
-# --- 2. CREATE STEAM WRAPPER ---
-# Writes the script only if changed or missing to save I/O, cleaner heredoc
-cat <<'EOF' > /usr/local/bin/start_steam.sh
-#!/bin/bash
-# Minimal controller config to reduce script bloat
-export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,platform:Linux,a:b0,b:b1,x:b3,y:b2,back:b8,start:b9,guide:b10,leftstick:b11,rightstick:b12,leftshoulder:b4,rightshoulder:b5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,leftx:a0,lefty:a1,rightx:a3,righty:a4,lefttrigger:a2,righttrigger:a5"
-exec steam -gamepadui -fullscreen -fulldesktopres -noverifyfiles
-EOF
-chmod +x /usr/local/bin/start_steam.sh
-chown steam:steam /usr/local/bin/start_steam.sh
-
 # --- 3. RUN MODULES ---
 # Source init system if it exists
 [ -f /usr/local/bin/scripts/init_system.sh ] && . /usr/local/bin/scripts/init_system.sh
@@ -79,16 +68,14 @@ while true; do
     # B. BUILD ARGUMENTS (FIXED)
     # Note: Every flag and every value is a separate array element.
     GS_ARGS=( 
-        "-e" 
+	"-e" 
         "-f" 
-        "-w" "$WIDTH" 
-        "-h" "$HEIGHT" 
 	"-W" "$WIDTH" 
         "-H" "$HEIGHT" 
         "-r" "$REFRESH" 
         "--force-grab-cursor" 
     )
-    
+
     if [ "$DISPLAY_MODE" = "HDR" ]; then
         echo "    [Config] Applying HDR Flags..."
         GS_ARGS+=( "--hdr-enabled" "--hdr-itm-enable" )
@@ -96,10 +83,11 @@ while true; do
     # REMOVED the 'else' block that wiped the array
 
     # C. START GAMESCOPE
+
     echo "    Running Gamescope..."
     echo "DEBUG: Running gamescope with: ${GS_ARGS[*]}"    
     # We pass the array exactly as is using "${GS_ARGS[@]}"
-    runuser -u steam -- gamescope "${GS_ARGS[@]}" -- /usr/local/bin/start_steam.sh &
+    runuser -u steam -- gamescope "${GS_ARGS[@]}" -- steam -gamepadui -noverifyfiles &
     GS_PID=$!
 
     # D. WAIT FOR SOCKET

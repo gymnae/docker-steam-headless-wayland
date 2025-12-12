@@ -1,4 +1,4 @@
-FROM cachyos/cachyos:latest
+FROM cachyos/cachyos-v3:latest
 
 # 1. Install Core & Gaming Packages
 # We REMOVE 'game-devices-udev' from here because it's not in the official repo.
