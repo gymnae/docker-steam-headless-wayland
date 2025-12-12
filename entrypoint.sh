@@ -80,7 +80,7 @@ while true; do
     echo "    >>> DETECTED MODE: '$DISPLAY_MODE' <<<"
 
     # B. BUILD ARGUMENTS
-    GS_ARGS=( "-e" "-W" "$WIDTH" "-H" "$HEIGHT" "-r" "$REFRESH" "--force-grab-cursor" )
+    GS_ARGS=( "-e" "-W" "$WIDTH" "-H" "$HEIGHT" "-f" "--force-grab-cursor" )
     
     if [ "$DISPLAY_MODE" = "HDR" ]; then
         echo "    [Config] Applying HDR Flags..."
