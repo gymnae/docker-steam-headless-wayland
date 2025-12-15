@@ -23,8 +23,7 @@ chown steam:steam "$CONF_FILE"
 
 # 2. Applications (The Toggle Logic)
 # 'prep-cmd' runs before the stream starts. We use it to switch modes.
-# We set 'image-path' to empty for now to force Moonlight to generate a text-based placeholder if no image is found,
-# which helps distinguish them if you don't have custom cover art.
+# FIXED: Added missing '],' after prep-cmd objects
 cat > "$APPS_FILE" <<EOF
 {
     "env": {
@@ -34,6 +33,12 @@ cat > "$APPS_FILE" <<EOF
         {
             "name": "Steam SDR",
             "output": "sunshine-sdr.log",
+            "prep-cmd": [
+                {
+                    "do": "/usr/local/bin/scripts/set_res.sh",
+                    "undo": ""
+                }
+            ],
             "detached": [
                 "/bin/bash -c 'echo -n SDR > /home/steam/.config/display_mode && pkill gamescope'"
             ],
@@ -42,6 +47,12 @@ cat > "$APPS_FILE" <<EOF
         {
             "name": "Steam HDR",
             "output": "sunshine-hdr.log",
+            "prep-cmd": [
+                {
+                    "do": "/usr/local/bin/scripts/set_res.sh",
+                    "undo": ""
+                }
+            ],
             "detached": [
                 "/bin/bash -c 'echo -n HDR > /home/steam/.config/display_mode && pkill gamescope'"
             ],
