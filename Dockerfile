@@ -6,9 +6,18 @@ RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
     # Core
     sudo vim openssh curl tar git \
-    # Graphics & Display
-    gamescope \
+    # Install Sway and essential tools
+    sway \
+    swaybg \
     xorg-xwayland \
+    qt5-wayland \
+    qt6-wayland \
+    jq \
+    libdisplay-info \
+    # Ensure Vulkan/HDR dependencies are present
+    vulkan-radeon lib32-vulkan-radeon \
+    vulkan-headers vulkan-validation-layers \
+    # Graphics & Display
     nvidia-utils \
     lib32-nvidia-utils \
     libva-nvidia-driver \
@@ -52,7 +61,7 @@ RUN useradd -m -G wheel,audio,video,input,storage -s /bin/bash steam && \
     chown -R steam:steam /home/steam && \
     # Capabilities for Sunshine (Network/Input) and Gamescope (Priority)
     setcap 'cap_sys_admin,cap_net_admin+p' $(readlink -f /usr/bin/sunshine) && \
-    setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
+#    setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
 
 
 RUN useradd -r -g rtkit -s /sbin/nologin rtkit || true
