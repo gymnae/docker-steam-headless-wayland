@@ -4,7 +4,12 @@ set -e
 echo "--- [Audio] Initializing Audio Stack (High Priority / Nice) ---"
 
 # Tuned latency for 4K/60fps stability
-export PIPEWIRE_LATENCY="256/48000"
+export PIPEWIRE_LATENCY="128/48000"
+export PIPEWIRE_QUANTUM="128/48000"
+export PIPEWIRE_MIN_QUANTUM="128/48000"
+export PIPEWIRE_MAX_QUANTUM="256/48000"
+export PIPEWIRE_RATE="48000"
+export PIPEWIRE_RESAMPLE_QUALITY="4"
 export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
 
 # Cleanup

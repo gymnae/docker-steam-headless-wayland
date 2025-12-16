@@ -79,6 +79,16 @@ RUN chmod +x /usr/local/bin/scripts/*.sh
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
+    echo "de_DE.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen
+
+# 2. Set System-wide Locale ENV
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
 # 7. Environment Variables
 # CRITICAL FIX: Added 'SteamDeck=1' to the list.
 ENV XDG_RUNTIME_DIR=/run/user/1000 \

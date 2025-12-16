@@ -1,45 +1,31 @@
 #!/bin/bash
 set -e
 
-echo "--- [Proton] Linking Compatibility Tools ---"
+echo "--- [Proton] Setting up Compatibility Tools ---"
 
-DEST_DIR="/home/steam/.steam/root/compatibilitytools.d"
-SRC_DIR="/usr/share/steam/compatibilitytools.d"
+# 1. Define Paths
+# System source (where the Docker image puts them)
+SYSTEM_TOOLS="/usr/share/steam/compatibilitytools.d"
+# User destination (where Steam looks, and pressure-vessel accepts)
+USER_TOOLS="/home/steam/.local/share/Steam/compatibilitytools.d"
 
-# Ensure destination exists
-mkdir -p "$DEST_DIR"
-chown steam:steam "$DEST_DIR"
+mkdir -p "$USER_TOOLS"
 
-if [ -d "$SRC_DIR" ]; then
-    echo "Scanning system tools in $SRC_DIR..."
-    
-    for tool_path in "$SRC_DIR"/*; do
-        tool_name=$(basename "$tool_path")
-        target_path="$DEST_DIR/$tool_name"
+# 2. Link Tools
+# We loop through the system tools and symlink them to the user folder.
+# This "tricks" Steam into thinking they are user-installed, bypassing the /usr restriction.
+if [ -d "$SYSTEM_TOOLS" ]; then
+    find "$SYSTEM_TOOLS" -mindepth 1 -maxdepth 1 -type d | while read -r tool; do
+        tool_name=$(basename "$tool")
+        target="$USER_TOOLS/$tool_name"
         
-        # 1. CLEANUP: Remove physical copies (from our previous debugging)
-        # If it's a directory but NOT a symlink, delete it to restore the lightweight link.
-        if [ -d "$target_path" ] && [ ! -L "$target_path" ]; then
-            echo "   -> [Cleanup] Removing physical copy of $tool_name..."
-            rm -rf "$target_path"
-        fi
-
-        # 2. SYMLINK: Create or Update
-        # We force link (-f) to ensure it points to the correct current location
-        if [ ! -e "$target_path" ] || [ -L "$target_path" ]; then
-            # Only relink if the target is different to avoid log spam
-            CURRENT_LINK=$(readlink "$target_path" || true)
-            if [ "$CURRENT_LINK" != "$tool_path" ]; then
-                echo "   -> [Link] Linking $tool_name..."
-                ln -sfn "$tool_path" "$target_path"
-            else
-                echo "   -> [OK] $tool_name linked."
-            fi
+        if [ ! -e "$target" ]; then
+            echo "    -> Linking $tool_name to user home..."
+            ln -s "$tool" "$target"
+        else
+            echo "    -> $tool_name already linked."
         fi
     done
 fi
-
-# Ensure steam owns the link objects themselves
-chown -h -R steam:steam "$DEST_DIR"
 
 echo "Proton setup complete."
