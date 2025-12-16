@@ -65,9 +65,9 @@ RUN useradd -m -G wheel,audio,video,input,storage,render -s /bin/bash steam && \
     setcap 'cap_sys_admin,cap_net_admin+p' $(readlink -f /usr/bin/sunshine) && \
     setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
 
-# 5. Inject PipeWire Low Latency Config
-RUN mkdir -p /etc/pipewire/pipewire.conf.d
-COPY config/low-latency.conf /etc/pipewire/pipewire.conf.d/99-lowlatency.conf
+## 5. Inject PipeWire Low Latency Config
+#RUN mkdir -p /etc/pipewire/pipewire.conf.d
+#COPY config/low-latency.conf /etc/pipewire/pipewire.conf.d/99-lowlatency.conf
 
 # 6. Inject Scripts
 # CRITICAL FIX: We copy the ENTIRE scripts folder. 
