@@ -1,33 +1,59 @@
 #!/bin/bash
 set -e
 
-echo "--- [Audio] Initializing Audio Stack ---"
+echo "--- [Audio] Initializing Audio Stack (High Priority / Nice) ---"
 
-# Settings
+# Tuned latency for 4K/60fps stability
 export PIPEWIRE_LATENCY="256/48000"
-export PIPEWIRE_QUANTUM="256/48000"
-export PIPEWIRE_MIN_QUANTUM="256/48000"
-export PIPEWIRE_MAX_QUANTUM="256/48000"
-export PIPEWIRE_RATE="48000"
-export PIPEWIRE_RESAMPLE_QUALITY="4"
-export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/var/run/dbus/system_bus_socket"
 export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
 
-# Cleanup & Preparation
+# Cleanup
 rm -rf $XDG_RUNTIME_DIR/pipewire-* $XDG_RUNTIME_DIR/pulse
 rm -rf /home/steam/.local/state/wireplumber
+
+# Permissions
+mkdir -p /home/steam/.local/state/wireplumber
+chown steam:steam /home/steam/.local/state/wireplumber
 mkdir -p $XDG_RUNTIME_DIR/pulse
 chown -R steam:steam $XDG_RUNTIME_DIR
 chmod 700 $XDG_RUNTIME_DIR/pulse
 
-# 1. Start Core (High Priority)
-echo "Starting PipeWire Core..."
-# FIX: Pass PIPEWIRE_RUNTIME_DIR so it knows where to put sockets
-nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- \
-    env HOME=/home/steam \
-        XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-        PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-    /usr/bin/pipewire &
+# --------------------------------------------------------
+# Helper Function: Start & Renice
+# --------------------------------------------------------
+start_and_nice() {
+    NAME=$1
+    CMD=$2
+    
+    echo "Starting $NAME..."
+    # Start the process as 'steam'
+    su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR; $CMD &"
+    
+    # Wait for PID creation
+    sleep 1
+    
+    # Find PID owned by steam
+    PID=$(pgrep -n -u steam $NAME)
+    
+    if [ -n "$PID" ]; then
+        echo "  -> $NAME running at PID $PID"
+        
+        # Apply High Priority (Nice -15)
+        # Since we are running this script as root, we can force this
+        # without needing /etc/security/limits.conf edits.
+        if renice -n -15 -p $PID >/dev/null 2>&1; then
+            echo "  -> [OK] Priority boosted (Nice -15)"
+        else
+            echo "  -> [Warn] Failed to boost priority"
+        fi
+    else
+        echo "  -> [Error] $NAME failed to start!"
+        exit 1
+    fi
+}
+
+# 1. Start PipeWire Core
+start_and_nice "pipewire" "pipewire"
 
 # Wait for Socket
 TIMEOUT=10
@@ -38,21 +64,10 @@ while [ ! -e "$XDG_RUNTIME_DIR/pipewire-0" ]; do
 done
 
 # 2. Start WirePlumber
-echo "Starting WirePlumber..."
-nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- \
-    env HOME=/home/steam \
-        XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-        PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-    /usr/bin/wireplumber &
-sleep 2
+start_and_nice "wireplumber" "wireplumber"
 
-# 3. Start PulseAudio Compat
-echo "Starting PipeWire-Pulse..."
-nice -n -15 setpriv --reuid=1000 --regid=1000 --init-groups --inh-caps=-all -- \
-    env HOME=/home/steam \
-        XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-        PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-    /usr/bin/pipewire-pulse &
+# 3. Start PipeWire-Pulse
+start_and_nice "pipewire-pulse" "pipewire-pulse"
 
 # Wait for Pulse Socket
 TIMEOUT=10
@@ -62,9 +77,9 @@ while [ ! -S "$XDG_RUNTIME_DIR/pulse/native" ]; do
     ((TIMEOUT--))
 done
 
-chmod 777 $XDG_RUNTIME_DIR/pulse/native 2>/dev/null || true
+chmod 777 $XDG_RUNTIME_DIR/pulse/native
 
-# 4. Create Sink (Standard priority is fine for pactl)
+# 4. Create Sink
 echo "Configuring Sink..."
 su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && \
                pactl load-module module-null-sink sink_name=sunshine-stereo rate=48000 sink_properties=device.description=Sunshine_Stereo"

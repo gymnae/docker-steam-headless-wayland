@@ -3,15 +3,12 @@ set -e
 
 echo "--- [System] Initializing Core Services ---"
 
-# 1. RTKit User
-if ! id -u rtkit >/dev/null 2>&1; then
-    useradd -r -d /proc -s /sbin/nologin rtkit
-fi
+# 1. Users & Groups
+if ! id -u rtkit >/dev/null 2>&1; then useradd -r -d /proc -s /sbin/nologin rtkit; fi
+usermod -aG video,input,audio,render steam
 
-# 2. Machine ID (Required for DBus)
-if [ ! -f /etc/machine-id ]; then
-    dbus-uuidgen > /etc/machine-id
-fi
+# 2. Machine ID
+if [ ! -f /etc/machine-id ]; then dbus-uuidgen > /etc/machine-id; fi
 mkdir -p /var/lib/dbus
 dbus-uuidgen > /var/lib/dbus/machine-id
 
@@ -22,42 +19,37 @@ dbus-daemon --system --fork
 echo "System DBus Started."
 
 # 4. Session DBus
-echo "Starting Session DBus..."
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
 su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork --nopidfile"
 sleep 1
 
-# 5. RTKit Daemon
-echo "Starting RTKit..."
-if [ -x /usr/lib/rtkit-daemon ]; then
-    /usr/lib/rtkit-daemon --our-realtime-priority=90 --max-realtime-priority=85 &
-fi
-
-# 6. UDev
-if [ -x /usr/lib/systemd/systemd-udevd ]; then
+# 5. Udev
+if [ -x /usr/lib/systemd/systemd-udevd ]; then 
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon
     udevadm trigger
 fi
 
-# 7. Seatd
-echo "Starting seatd..."
-seatd & 
-export LIBSEAT_BACKEND=seatd
-sleep 1
-chmod 777 /run/seatd.sock
+# 6. Global Permissions
+chmod 666 /dev/uinput /dev/input/event* /dev/dri/card0 /dev/dri/renderD* 2>/dev/null || true
+chown root:video /dev/input/event* 2>/dev/null || true
 
-# 8. Localization (NEW)
+# 7. Localization
 if [ -n "$GENERATE_LOCALE" ]; then
-    echo "Generating Locale: $GENERATE_LOCALE"
     sed -i "s/# $GENERATE_LOCALE/$GENERATE_LOCALE/" /etc/locale.gen
     locale-gen
     export LANG="$GENERATE_LOCALE"
-    export LC_ALL="$GENERATE_LOCALE"
 fi
 
-if [ -n "$KEYBOARD_LAYOUT" ]; then
-    echo "Setting Keyboard Layout: $KEYBOARD_LAYOUT"
-    export XKB_DEFAULT_LAYOUT="$KEYBOARD_LAYOUT"
-    export XKB_DEFAULT_VARIANT="${KEYBOARD_VARIANT:-}"
-fi
+# 8. PAM LIMITS FIX (CRITICAL FOR AUDIO)
+# This allows 'su - steam' to actually USE the rtprio/memlock limits provided by Docker
+echo "Applying PAM Limits for steam user..."
+cat >> /etc/security/limits.conf <<EOF
+steam    soft    rtprio    99
+steam    hard    rtprio    99
+steam    soft    memlock   unlimited
+steam    hard    memlock   unlimited
+steam    soft    nice      -20
+steam    hard    nice      -20
+EOF
+echo "session required pam_limits.so" >> /etc/pam.d/su

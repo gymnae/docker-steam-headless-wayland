@@ -1,132 +1,157 @@
 #!/bin/bash
 set -e
 
-# --- 0. CLEANUP ---
+# --- 0. TEARDOWN ON BOOT ---
 echo "--- [Boot] Cleaning up ---"
-# Added -q to killall to suppress "no process found" noise
 killall -9 -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon || true
-rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid 2>/dev/null
+rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart 2>/dev/null
 
-# --- 1. RUNTIME ENV & PERMISSIONS ---
-echo "--- [Boot] Setting Environment & Permissions ---"
-
-# Set defaults
-WIDTH=${WIDTH:-2560}
-HEIGHT=${HEIGHT:-1440}
-REFRESH=${REFRESH:-60}
-
-# Set vars
+# --- 1. RUNTIME ENV ---
 export XDG_RUNTIME_DIR=/run/user/1000
+export XDG_SEAT=seat0
+export SEATD_VTBOUND=0
+export LIBSEAT_BACKEND=seatd
+
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 0700 "$XDG_RUNTIME_DIR"
 chown steam:steam "$XDG_RUNTIME_DIR"
 
-# Loop for cleaner permission setting
-echo "    Applying device permissions..."
-for dev in /dev/dri/card0 /dev/dri/renderD* /dev/uinput /dev/hidraw* /dev/uhid; do
-    [ -e "$dev" ] && chmod 666 "$dev"
-done
+# Global Permissions
+chmod 666 /dev/uinput /dev/dri/card0 /dev/dri/renderD* /dev/input/event* 2>/dev/null || true
+chown root:video /dev/input/event* 2>/dev/null || true
 
-# Create nodes if missing
-[ ! -e /dev/uinput ] && mknod /dev/uinput c 10 223 && chmod 666 /dev/uinput
-[ ! -e /dev/tty0 ] && mknod /dev/tty0 c 4 0 && chmod 666 /dev/tty0
-[ ! -e /dev/tty1 ] && mknod /dev/tty1 c 4 1 && chmod 666 /dev/tty1
-
-# Fix Steam directories
-mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/state
-chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
-
-# --- 3. RUN MODULES ---
-# Source init system if it exists
-[ -f /usr/local/bin/scripts/init_system.sh ] && . /usr/local/bin/scripts/init_system.sh
-
-export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
-
-# Execute helper scripts
-for script in init_audio init_proton init_sunshine watchdog; do
+# --- 2. INIT MODULES ---
+for script in init_system init_audio init_proton init_sunshine; do
     if [ -x "/usr/local/bin/scripts/${script}.sh" ]; then
         /usr/local/bin/scripts/${script}.sh
     fi
 done
 
-# --- 4. SESSION LOOP ---
+# --- 3. SESSION LOOP ---
 while true; do
     echo "--- [Session] Starting Graphics Stack ---"
-
-    # A. CHECK MODE
-    DISPLAY_MODE="SDR"
-    MODE_FILE="/home/steam/.config/display_mode"
     
-    if [ -f "$MODE_FILE" ]; then
-        DISPLAY_MODE=$(tr -d '[:space:]' < "$MODE_FILE")
+    # ----------------------------------------
+    # PHASE 1: TEARDOWN
+    # ----------------------------------------
+    rm -f /tmp/trigger_restart
+    unset WAYLAND_DISPLAY
+    unset DISPLAY
+    
+    killall -q sunshine gamescope steam seatd || true
+    sleep 1
+    killall -9 -q sunshine gamescope steam seatd || true
+    
+    rm -rf /tmp/.X11-unix /tmp/.X0-lock /run/seatd.sock "$XDG_RUNTIME_DIR/gamescope-0"
+    mkdir -p /tmp/.X11-unix
+    chmod 1777 /tmp/.X11-unix
+
+    # ----------------------------------------
+    # PHASE 2: HARDWARE SETUP
+    # ----------------------------------------
+    udevadm trigger --action=change --subsystem-match=input
+    udevadm trigger --action=change --subsystem-match=drm
+    sleep 0.5
+
+    echo "    Starting seatd..."
+    seatd -g video &
+    SEATD_PID=$!
+    
+    # Wait for socket
+    TIMEOUT=10
+    while [ ! -S "/run/seatd.sock" ]; do
+        sleep 0.1
+        ((TIMEOUT--))
+        if [ $TIMEOUT -le 0 ]; then echo "Seatd failed to start"; break; fi
+    done
+    chmod 777 /run/seatd.sock
+
+    # ----------------------------------------
+    # PHASE 3: CONFIGURATION
+    # ----------------------------------------
+    CURRENT_WIDTH=1920
+    CURRENT_HEIGHT=1080
+    CURRENT_REFRESH=60
+    CURRENT_HDR="false"
+    
+    CONFIG_FILE="/home/steam/.config/display_config"
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+        CURRENT_WIDTH=${WIDTH:-$CURRENT_WIDTH}
+        CURRENT_HEIGHT=${HEIGHT:-$CURRENT_HEIGHT}
+        CURRENT_REFRESH=${REFRESH:-$CURRENT_REFRESH}
+        CURRENT_HDR=${HDR_ENABLED:-$CURRENT_HDR}
+    fi
+
+    echo "    >>> CONFIG: ${CURRENT_WIDTH}x${CURRENT_HEIGHT} @ ${CURRENT_REFRESH} (HDR: $CURRENT_HDR) <<<"
+
+    GS_ARGS="-e -f -w $CURRENT_WIDTH -h $CURRENT_HEIGHT -W $CURRENT_WIDTH -H $CURRENT_HEIGHT -r $CURRENT_REFRESH --force-grab-cursor"
+
+    if [ "$CURRENT_HDR" = "true" ] || [ "$CURRENT_HDR" = "1" ]; then
+        GS_ARGS="$GS_ARGS --hdr-enabled --hdr-itm-enable"
     else
-        echo -n "SDR" > "$MODE_FILE"
-        chown steam:steam "$MODE_FILE"
+        GS_ARGS="$GS_ARGS --sdr-gamut-wideness 0"
     fi
-    echo "    >>> DETECTED MODE: '$DISPLAY_MODE' <<<"
-
-    # B. BUILD ARGUMENTS (FIXED)
-    # Note: Every flag and every value is a separate array element.
-    GS_ARGS=( 
-	"-e" 
-        "-f" 
-	"-h" "$HEIGHT" 
-        "-w" "$WIDTH" 
-	"-W" "$WIDTH" 
-        "-H" "$HEIGHT" 
-        "-r" "$REFRESH" 
-        "--force-grab-cursor" 
-    )
-
-    if [ "$DISPLAY_MODE" = "HDR" ]; then
-        echo "    [Config] Applying HDR Flags..."
-        GS_ARGS+=( "--hdr-enabled" "--hdr-itm-enable" )
-    fi
-    # REMOVED the 'else' block that wiped the array
-
-    # C. START GAMESCOPE
-
-    echo "    Running Gamescope..."
-	export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
-	050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
-	030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
-	050000004c050000c405000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,"
-    echo "DEBUG: Running gamescope with: ${GS_ARGS[*]}"    
-    # We pass the array exactly as is using "${GS_ARGS[@]}"
-    runuser -u steam -- gamescope "${GS_ARGS[@]}" -- steam -gamepadui -noverifyfiles &
+    
+    # ----------------------------------------
+    # PHASE 4: LAUNCH
+    # ----------------------------------------
+    
+    echo "    Launching Gamescope..."
+    
+    # Use runuser with split groups to fix syntax error
+    runuser -u steam -g steam -G video -G input -G audio -G render -- /bin/bash -c "
+        export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR
+        export GAMESCOPE_WIDTH=$CURRENT_WIDTH
+        export GAMESCOPE_HEIGHT=$CURRENT_HEIGHT
+        export WLR_BACKENDS=headless
+        export UG_MAX_BUFFERS=256
+        exec gamescope $GS_ARGS -- steam -gamepadui -noverifyfiles -fulldesktopres
+    " &
+    
     GS_PID=$!
 
-    # D. WAIT FOR SOCKET
     echo "    Waiting for Wayland socket..."
     TIMEOUT=30
     while [ ! -S "$XDG_RUNTIME_DIR/gamescope-0" ] && [ $TIMEOUT -gt 0 ]; do
         sleep 0.5
         ((TIMEOUT--))
     done
-    
-    # E. START SUNSHINE
-    SUNSHINE_PID=""
+
     if [ -S "$XDG_RUNTIME_DIR/gamescope-0" ]; then
-        # Export vars explicitly for Sunshine context
         export WAYLAND_DISPLAY=gamescope-0
         export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
-        
-        # Ensure permissions so Sunshine can read the socket
-        chmod 770 "$XDG_RUNTIME_DIR/gamescope-0"
+        chmod 777 "$XDG_RUNTIME_DIR/gamescope-0"
         
         echo "    Starting Sunshine..."
         sunshine &
         SUNSHINE_PID=$!
     else
-        echo "    [Error] Gamescope socket not found after 15s. Skipping Sunshine."
+        echo "    [Error] Gamescope failed to start (Socket missing)."
     fi
 
-    # F. BLOCK UNTIL EXIT
-    wait $GS_PID
+    # ----------------------------------------
+    # PHASE 5: WATCHDOG
+    # ----------------------------------------
+    while kill -0 "$GS_PID" 2>/dev/null; do
+        if [ -f "/tmp/trigger_restart" ]; then
+            echo "    >>> RESTART TRIGGER DETECTED <<<"
+            break
+        fi
+        sleep 0.5
+    done
     
-    echo "--- [Session] Gamescope exited. Cleaning up... ---"
+    echo "--- [Session] Stopping services... ---"
     
     [ -n "$SUNSHINE_PID" ] && kill "$SUNSHINE_PID" 2>/dev/null || true
-    killall -9 -q steam gamescope sunshine || true
-    sleep 2
+    killall -9 -q steam || true
+    
+    if kill -0 "$GS_PID" 2>/dev/null; then
+        kill "$GS_PID"
+        TIMEOUT=5
+        while kill -0 "$GS_PID" 2>/dev/null && [ $TIMEOUT -gt 0 ]; do sleep 0.5; ((TIMEOUT--)); done
+        kill -9 "$GS_PID" 2>/dev/null || true
+    fi
+    
+    sleep 1
 done
