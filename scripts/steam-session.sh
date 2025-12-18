@@ -46,4 +46,4 @@ fi
 
 # --- 5. Execute Gamescope ---
 echo "    Executing: gamescope $GS_ARGS"
-exec SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" gamescope $GS_ARGS -- steam -gamepadui -noverifyfiles -fulldesktopres
+exec gamescope $GS_ARGS -- steam -gamepadui -noverifyfiles -fulldesktopres
