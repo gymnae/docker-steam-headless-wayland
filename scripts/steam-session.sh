@@ -34,7 +34,6 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 030000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
-echo "    Applied inline controller mapping."
 
 # --- 4. Build Gamescope Arguments ---
 GS_ARGS="-e -f -w $WIDTH -h $HEIGHT -W $WIDTH -H $HEIGHT -r $REFRESH --force-grab-cursor"
@@ -47,4 +46,4 @@ fi
 
 # --- 5. Execute Gamescope ---
 echo "    Executing: gamescope $GS_ARGS"
-exec gamescope $GS_ARGS -- steam -gamepadui -noverifyfiles -fulldesktopres
+exec SDL_GAMECONTROLLERCONFIG="$SDL_GAMECONTROLLERCONFIG" gamescope $GS_ARGS -- steam -gamepadui -noverifyfiles -fulldesktopres
