@@ -1,4 +1,6 @@
-steam*
+steam-config
+steam-data
 sunshine*
+archive
 docker-compose.yml
 docker-compose.yml.local
