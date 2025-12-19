@@ -26,7 +26,7 @@ RUN pacman -Syu --noconfirm && \
     # --- Nvidia Support - pinned to famnily ---
     nvidia-580xx-utils \
     lib32-nvidia-580xx-utils \
-    libva-nvidia-580xx-driver \
+    libva-nvidia-driver \
     # Gaming Stack
     steam \
     ffmpeg \
