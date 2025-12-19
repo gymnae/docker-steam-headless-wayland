@@ -23,10 +23,10 @@ RUN pacman -Syu --noconfirm && \
     lib32-vulkan-intel \
     intel-media-driver \
     libva-intel-driver \
-    # --- Nvidia Support ---
-    nvidia-utils \
-    lib32-nvidia-utils \
-    libva-nvidia-driver \
+    # --- Nvidia Support - pinned to famnily ---
+    nvidia-580xx-utils \
+    lib32-nvidia-580xx-utils \
+    libva-nvidia-580xx-driver \
     # Gaming Stack
     steam \
     ffmpeg \
