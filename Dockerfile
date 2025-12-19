@@ -33,6 +33,7 @@ RUN pacman -Syu --noconfirm && \
     sunshine \
     proton-cachyos \
     mangohud \
+    protontricks \
     # Audio
     rtkit \
     pipewire pipewire-pulse wireplumber \
