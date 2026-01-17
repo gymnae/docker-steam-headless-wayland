@@ -5,9 +5,10 @@ on:
       - main
   schedule:
     - cron: '0 2 * * 0' # Weekly on Sundays at 02:00
+  workflow_dispatch: # Allows manual triggering
 jobs:
   build:
-    if: ${{ github.event_name != 'schedule'}}
+    #if: ${{ github.event_name != 'schedule'}}
     runs-on: ubuntu-latest
     steps:
       - 
