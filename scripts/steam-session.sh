@@ -41,7 +41,7 @@ GS_ARGS="-e -f -w $WIDTH -h $HEIGHT -W $WIDTH -H $HEIGHT -r $REFRESH --force-gra
 if [ "$HDR_ENABLED" = "true" ] || [ "$HDR_ENABLED" = "1" ]; then
     GS_ARGS="$GS_ARGS --hdr-enabled --hdr-itm-enable"
 else
-    GS_ARGS="$GS_ARGS --sdr-gamut-wideness 0"
+    GS_ARGS="$GS_ARGS"
 fi
 
 # --- 5. Execute Gamescope ---
