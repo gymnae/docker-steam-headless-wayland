@@ -53,6 +53,17 @@ export ENABLE_GAMESCOPE_WSI=0
 # 5. Disable Steam Overlay (Fixes ld.so errors and render conflicts)
 export STEAM_DISABLE_GAME_OVERLAY=1
 
+# --- CRITICAL AUDIO FIXES ---
+# Force PulseAudio driver for everything
+export SDL_AUDIODRIVER=pulse
+export ALSOFT_DRIVERS=pulse
+export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
+
+# Set latency to match the "min-quantum" we set in init_audio.sh
+export PIPEWIRE_LATENCY="256/48000"
+export PULSE_LATENCY_MSEC=60
+
+
 # --- 3. Controller Mappings (Inline) ---
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
