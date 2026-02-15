@@ -28,6 +28,7 @@ export GAMESCOPE_WIDTH="$WIDTH"
 export GAMESCOPE_HEIGHT="$HEIGHT"
 export WLR_BACKENDS=headless
 export UG_MAX_BUFFERS=256
+export WLR_DRM_NO_MODIFIERS=1
 export ENABLE_GAMESCOPE_WSI=0
 
 # --- 3. Controller Mappings (Inline) ---
