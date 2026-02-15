@@ -33,8 +33,9 @@ export UG_MAX_BUFFERS=256
 # 1. Force Linear Memory (Fixes Black Screen / Double Buffer error)
 export WLR_DRM_NO_MODIFIERS=1
 
-# 2. Fixes XWayland Crashes/Corruption on NVIDIA
-export XWAYLAND_NO_GLAMOR=1
+# 2. Nvidia de-sync issuse 
+export __GL_THREADED_OPTIMIZATIONS=0
+export __GL_SYNC_TO_VBLANK=0
 
 # 3. Disable WSI (Fixes Launcher Hangs)
 export ENABLE_GAMESCOPE_WSI=0
