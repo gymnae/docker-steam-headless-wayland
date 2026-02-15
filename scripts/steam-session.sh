@@ -28,8 +28,22 @@ export GAMESCOPE_WIDTH="$WIDTH"
 export GAMESCOPE_HEIGHT="$HEIGHT"
 export WLR_BACKENDS=headless
 export UG_MAX_BUFFERS=256
+
+# --- CRITICAL NVIDIA STABILITY FIXES ---
+# 1. Force Linear Memory (Fixes Black Screen / Double Buffer error)
 export WLR_DRM_NO_MODIFIERS=1
+
+# 2. Disable Threaded Opt (Fixes Crash on Splash Screen)
+export __GL_THREADED_OPTIMIZATIONS=0
+
+# 3. Force Gamescope to use Vulkan Renderer (Stability)
+export WLR_RENDERER=vulkan
+
+# 4. Disable WSI (Fixes Launcher Hangs)
 export ENABLE_GAMESCOPE_WSI=0
+
+# 5. Disable Steam Overlay (Fixes ld.so errors and render conflicts)
+export STEAM_DISABLE_GAME_OVERLAY=1
 
 # --- 3. Controller Mappings (Inline) ---
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
