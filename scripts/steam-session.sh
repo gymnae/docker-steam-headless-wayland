@@ -26,7 +26,7 @@ echo "    Resolution: ${WIDTH}x${HEIGHT} @ ${REFRESH} (HDR: $HDR_ENABLED)"
 export XDG_RUNTIME_DIR=/run/user/1000
 export GAMESCOPE_WIDTH="$WIDTH"
 export GAMESCOPE_HEIGHT="$HEIGHT"
-export WLR_BACKENDS=headless
+export WLR_BACKENDS=drm,libinput
 export UG_MAX_BUFFERS=256
 
 # --- CRITICAL NVIDIA STABILITY FIXES ---
