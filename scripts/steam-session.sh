@@ -33,8 +33,15 @@ export UG_MAX_BUFFERS=256
 # 1. Force Linear Memory (Fixes Black Screen / Double Buffer error)
 export WLR_DRM_NO_MODIFIERS=1
 
-# 2. Disable Threaded Opt (Fixes Crash on Splash Screen)
-export __GL_THREADED_OPTIMIZATIONS=0
+# 2. Fixes XWayland Crashes/Corruption on NVIDIA
+export XWAYLAND_NO_GLAMOR=1
+
+# 3. Disable WSI (Fixes Launcher Hangs)
+export ENABLE_GAMESCOPE_WSI=0
+
+# 4. Enable NVIDIA API for Proton (Stability/Performance)
+export PROTON_ENABLE_NVAPI=1
+export DXVK_ENABLE_NVAPI=1
 
 # 3. Force Gamescope to use Vulkan Renderer (Stability)
 export WLR_RENDERER=vulkan
