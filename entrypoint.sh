@@ -92,7 +92,7 @@ while true; do
         export WAYLAND_DISPLAY=gamescope-0
         export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
         chmod 777 "$XDG_RUNTIME_DIR/gamescope-0"
-        
+        sleep 2
         echo "    [Supervisor] Starting Sunshine..."
         sunshine &
         SUNSHINE_PID=$!
