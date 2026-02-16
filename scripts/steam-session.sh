@@ -60,7 +60,7 @@ export ALSOFT_DRIVERS=pulse
 export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
 
 # Set latency to match the "min-quantum" we set in init_audio.sh
-export PIPEWIRE_LATENCY="256/48000"
+export PIPEWIRE_LATENCY="128/48000"
 export PULSE_LATENCY_MSEC=60
 
 
