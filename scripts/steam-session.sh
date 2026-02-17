@@ -46,7 +46,7 @@ fi
 export XDG_RUNTIME_DIR=/run/user/1000
 export GAMESCOPE_WIDTH="$WIDTH"
 export GAMESCOPE_HEIGHT="$HEIGHT"
-export WLR_BACKENDS=drm,libinput
+export WLR_BACKENDS=drm
 export UG_MAX_BUFFERS=256
 export PROTON_NO_ESYNC=1
 
