@@ -15,7 +15,7 @@ cat > /home/steam/.config/pipewire/pipewire.conf.d/99-rates.conf <<EOF
 context.properties = {
     default.clock.rate = 48000
     default.clock.allowed-rates = [ 48000 ]
-    default.clock.min-quantum = 128
+    default.clock.min-quantum = 256
     default.clock.max-quantum = 2048
 }
 EOF

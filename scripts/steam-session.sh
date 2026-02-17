@@ -22,12 +22,33 @@ fi
 echo "--- [Steam Session] Starting ---"
 echo "    Resolution: ${WIDTH}x${HEIGHT} @ ${REFRESH} (HDR: $HDR_ENABLED)"
 
+
+# 1. Detect the GPU Name
+# We grep for 'deviceName', remove software renderers, and use sed to strip the label.
+# This variable naturally handles spaces because it captures the whole line output.
+RAW_GPU_LINE=$(vulkaninfo | grep "deviceName" | grep -v -E "llvmpipe|lavapipe|softpipe" | head -n1)
+
+# 2. Extract just the name (removing "deviceName = ")
+# We use quotes around "$RAW_GPU_LINE" to preserve spaces.
+GPU_NAME=$(echo "$RAW_GPU_LINE" | sed 's/.*deviceName *= //')
+
+# 3. Check and Export
+if [ -n "$GPU_NAME" ]; then
+    echo "Universal GPU Detection: Found '$GPU_NAME'"
+    # The quotes here are critical!
+    export DXVK_FILTER_DEVICE_NAME="$GPU_NAME"
+else
+    echo "Universal GPU Detection: No hardware GPU found."
+    unset DXVK_FILTER_DEVICE_NAME
+fi
+
 # --- 2. Export Environment Variables ---
 export XDG_RUNTIME_DIR=/run/user/1000
 export GAMESCOPE_WIDTH="$WIDTH"
 export GAMESCOPE_HEIGHT="$HEIGHT"
 export WLR_BACKENDS=drm,libinput
 export UG_MAX_BUFFERS=256
+export PROTON_NO_ESYNC=1
 
 # --- CRITICAL NVIDIA STABILITY FIXES ---
 # 1. Force Linear Memory (Fixes Black Screen / Double Buffer error)
@@ -60,7 +81,7 @@ export ALSOFT_DRIVERS=pulse
 export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
 
 # Set latency to match the "min-quantum" we set in init_audio.sh
-export PIPEWIRE_LATENCY="128/48000"
+export PIPEWIRE_LATENCY="256/48000"
 export PULSE_LATENCY_MSEC=60
 
 
