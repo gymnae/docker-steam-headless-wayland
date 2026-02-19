@@ -25,7 +25,7 @@ services:
       - seccomp:unconfined
       - apparmor:unconfined
     volumes:
-      - ./steam-user:/home/steam  
+      - ./steam-user:/home/steam
       - ./sunshine-conf:/home/steam/.config/sunshine
       - /mnt/localgames:/mnt/games:rw
       #- /run/udev:/run/udev:ro
@@ -42,7 +42,7 @@ services:
       # Add NVIDIA HW accelerated devices [OPTIONAL].
       # NOTE: If you use the nvidia container toolkit, this is not needed.
       #       Installing the nvidia container toolkit is the recommended method for running this container
-      - /dev/dri
+      - /dev/dri:/dev/dri
       - /dev/nvidia0
       - /dev/nvidiactl
       - /dev/nvidia-modeset

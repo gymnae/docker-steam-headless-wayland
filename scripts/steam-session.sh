@@ -80,4 +80,4 @@ if [ -f "/usr/local/bin/scripts/hyprland.conf" ]; then
 fi
 
 # --- 6. Execute Hyprland ---
-exec start-hyprland
+exec start-hyprland -c /home/steam/.config/hypr/hyprland.conf
