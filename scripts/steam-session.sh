@@ -21,7 +21,7 @@ fi
 echo "--- [Steam Session] Starting Hyprland Compositor ---"
 echo "    Target Resolution: ${WIDTH}x${HEIGHT} @ ${REFRESH} (HDR: $HDR_ENABLED)"
 
-# --- 2. Universal GPU Detection & Selection ---
+# --- 2. Universal GPU Detection ---
 RAW_GPU_LINE=$(vulkaninfo 2>/dev/null | grep "deviceName" | grep -v -E "llvmpipe|lavapipe|softpipe" | head -n1 || true)
 GPU_NAME=$(echo "$RAW_GPU_LINE" | sed 's/.*deviceName *= //' || true)
 
@@ -33,11 +33,10 @@ else
     unset DXVK_FILTER_DEVICE_NAME
 fi
 
-# DUAL GPU FIX: Find the NVIDIA card in /sys/class/drm and force Hyprland to use it
+# DUAL GPU FIX: Force NVIDIA for Hyprland (Prevents Intel iGPU from crashing the compositor)
 NVIDIA_CARD=$(grep -l "0x10de" /sys/class/drm/card*/device/vendor 2>/dev/null | cut -d '/' -f 5 | head -n 1 || true)
 if [ -n "$NVIDIA_CARD" ]; then
     echo "    Multi-GPU Fix: Forcing Compositor to use NVIDIA (/dev/dri/$NVIDIA_CARD)"
-    # AQ_DRM_DEVICES is for newer Hyprland, WLR_ is for older fallback
     export AQ_DRM_DEVICES="/dev/dri/$NVIDIA_CARD"
     export WLR_DRM_DEVICES="/dev/dri/$NVIDIA_CARD"
 fi
@@ -58,14 +57,8 @@ export WLR_NO_HARDWARE_CURSORS=1
 export PROTON_ENABLE_NVAPI=1
 export DXVK_ENABLE_NVAPI=1
 
-# Audio
-#export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
-#export SDL_AUDIODRIVER=pulse
-#export ALSOFT_DRIVERS=pulse
-#export PIPEWIRE_LATENCY="512/48000"
-#export PULSE_LATENCY_MSEC=60
-
 # --- 4. Controller Mappings ---
+# Your exact restored mapping for DualSense / Edge
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
@@ -80,7 +73,9 @@ else
     echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1" > /home/steam/.config/hypr/monitor.conf
 fi
 
-cp /usr/local/bin/scripts/hyprland.conf /home/steam/.config/hypr/hyprland.conf
+if [ -f "/usr/local/bin/scripts/hyprland.conf" ]; then
+    cp /usr/local/bin/scripts/hyprland.conf /home/steam/.config/hypr/hyprland.conf
+fi
 
 # --- 6. Execute Hyprland ---
 exec Hyprland

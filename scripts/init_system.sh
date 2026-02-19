@@ -30,9 +30,10 @@ if [ -x /usr/lib/systemd/systemd-udevd ]; then
     udevadm trigger
 fi
 
-# 6. Global Permissions (CRITICAL FIX: Changed card0 to card*)
-chmod 666 /dev/uinput /dev/input/event* /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
-chown root:video /dev/input/event* /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
+# 6. Global Permissions (CRITICAL FIX FOR HYPRLAND)
+# We must unlock the /dev/nvidia* devices so the user-space driver can talk to the kernel.
+chmod 666 /dev/uinput /dev/input/event* /dev/dri/card* /dev/dri/renderD* /dev/nvidia* 2>/dev/null || true
+chown root:video /dev/input/event* 2>/dev/null || true
 
 # 7. Localization
 if [ -n "$GENERATE_LOCALE" ]; then
