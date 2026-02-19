@@ -46,7 +46,7 @@ fi
 export XDG_RUNTIME_DIR=/run/user/1000
 export GAMESCOPE_WIDTH="$WIDTH"
 export GAMESCOPE_HEIGHT="$HEIGHT"
-export WLR_BACKENDS=drm
+export WLR_BACKENDS=headless
 export UG_MAX_BUFFERS=256
 export PROTON_NO_ESYNC=1
 
@@ -74,15 +74,15 @@ export ENABLE_GAMESCOPE_WSI=0
 # 5. Disable Steam Overlay (Fixes ld.so errors and render conflicts)
 export STEAM_DISABLE_GAME_OVERLAY=1
 
-# --- CRITICAL AUDIO FIXES ---
-# Force PulseAudio driver for everything
-export SDL_AUDIODRIVER=pulse
-export ALSOFT_DRIVERS=pulse
-export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
+## --- CRITICAL AUDIO FIXES ---
+## Force PulseAudio driver for everything
+#export SDL_AUDIODRIVER=pulse
+#export ALSOFT_DRIVERS=pulse
+#export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
 
-# Set latency to match the "min-quantum" we set in init_audio.sh
-export PIPEWIRE_LATENCY="256/48000"
-export PULSE_LATENCY_MSEC=60
+## Set latency to match the "min-quantum" we set in init_audio.sh
+#export PIPEWIRE_LATENCY="256/48000"
+#export PULSE_LATENCY_MSEC=60
 
 
 # --- 3. Controller Mappings (Inline) ---
