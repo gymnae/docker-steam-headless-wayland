@@ -70,7 +70,7 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller
 mkdir -p /home/steam/.config/hypr
 
 if [ "$HDR_ENABLED" = "true" ] || [ "$HDR_ENABLED" = "1" ]; then
-    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1,bitdepth,10" > /home/steam/.config/hypr/monitor.conf
+    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1,bitdepth,10,cm, hdr, sdrbrightness, 1.2, sdrsaturation, 0.98" > /home/steam/.config/hypr/monitor.conf
 else
     echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1" > /home/steam/.config/hypr/monitor.conf
 fi
