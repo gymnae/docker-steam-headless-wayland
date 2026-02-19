@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-# --- 0. Sanitize Environment (CRITICAL FIX) ---
-# Ensure Gamescope knows it is the SERVER, not a client.
+# --- 0. Sanitize Environment ---
 unset WAYLAND_DISPLAY
 unset DISPLAY
 unset GDK_BACKEND
@@ -19,87 +18,69 @@ if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
 fi
 
-echo "--- [Steam Session] Starting ---"
-echo "    Resolution: ${WIDTH}x${HEIGHT} @ ${REFRESH} (HDR: $HDR_ENABLED)"
+echo "--- [Steam Session] Starting Hyprland Compositor ---"
+echo "    Target Resolution: ${WIDTH}x${HEIGHT} @ ${REFRESH} (HDR: $HDR_ENABLED)"
 
+# --- 2. Universal GPU Detection & Selection ---
+RAW_GPU_LINE=$(vulkaninfo 2>/dev/null | grep "deviceName" | grep -v -E "llvmpipe|lavapipe|softpipe" | head -n1 || true)
+GPU_NAME=$(echo "$RAW_GPU_LINE" | sed 's/.*deviceName *= //' || true)
 
-# 1. Detect the GPU Name
-# We grep for 'deviceName', remove software renderers, and use sed to strip the label.
-# This variable naturally handles spaces because it captures the whole line output.
-RAW_GPU_LINE=$(vulkaninfo | grep "deviceName" | grep -v -E "llvmpipe|lavapipe|softpipe" | head -n1)
-
-# 2. Extract just the name (removing "deviceName = ")
-# We use quotes around "$RAW_GPU_LINE" to preserve spaces.
-GPU_NAME=$(echo "$RAW_GPU_LINE" | sed 's/.*deviceName *= //')
-
-# 3. Check and Export
 if [ -n "$GPU_NAME" ]; then
-    echo "Universal GPU Detection: Found '$GPU_NAME'"
-    # The quotes here are critical!
+    echo "    Universal GPU Detection: Found '$GPU_NAME'"
     export DXVK_FILTER_DEVICE_NAME="$GPU_NAME"
 else
-    echo "Universal GPU Detection: No hardware GPU found."
+    echo "    Universal GPU Detection: No hardware GPU found."
     unset DXVK_FILTER_DEVICE_NAME
 fi
 
-# --- 2. Export Environment Variables ---
+# DUAL GPU FIX: Find the NVIDIA card in /sys/class/drm and force Hyprland to use it
+NVIDIA_CARD=$(grep -l "0x10de" /sys/class/drm/card*/device/vendor 2>/dev/null | cut -d '/' -f 5 | head -n 1 || true)
+if [ -n "$NVIDIA_CARD" ]; then
+    echo "    Multi-GPU Fix: Forcing Compositor to use NVIDIA (/dev/dri/$NVIDIA_CARD)"
+    # AQ_DRM_DEVICES is for newer Hyprland, WLR_ is for older fallback
+    export AQ_DRM_DEVICES="/dev/dri/$NVIDIA_CARD"
+    export WLR_DRM_DEVICES="/dev/dri/$NVIDIA_CARD"
+fi
+
+# --- 3. Environment Variables ---
 export XDG_RUNTIME_DIR=/run/user/1000
-export GAMESCOPE_WIDTH="$WIDTH"
-export GAMESCOPE_HEIGHT="$HEIGHT"
-export WLR_BACKENDS=headless
-export UG_MAX_BUFFERS=256
-export PROTON_NO_ESYNC=1
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=Hyprland
 
-# --- CRITICAL NVIDIA STABILITY FIXES ---
-# 1. Force Linear Memory (Fixes Black Screen / Double Buffer error)
-export WLR_DRM_NO_MODIFIERS=1
+export LIBSEAT_BACKEND=seatd
+export XDG_SEAT=seat0
 
-# 2. Nvidia de-sync issuse 
-export __GL_THREADED_OPTIMIZATIONS=0
-export __GL_SYNC_TO_VBLANK=0
-
-# 3. Disable WSI (Fixes Launcher Hangs)
-export ENABLE_GAMESCOPE_WSI=0
-
-# 4. Enable NVIDIA API for Proton (Stability/Performance)
+# NVIDIA Environment Variables
+export GBM_BACKEND=nvidia-drm
+export LIBVA_DRIVER_NAME=nvidia
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export WLR_NO_HARDWARE_CURSORS=1
 export PROTON_ENABLE_NVAPI=1
 export DXVK_ENABLE_NVAPI=1
 
-# 3. Force Gamescope to use Vulkan Renderer (Stability)
-export WLR_RENDERER=vulkan
-
-# 4. Disable WSI (Fixes Launcher Hangs)
-export ENABLE_GAMESCOPE_WSI=0
-
-# 5. Disable Steam Overlay (Fixes ld.so errors and render conflicts)
-export STEAM_DISABLE_GAME_OVERLAY=1
-
-## --- CRITICAL AUDIO FIXES ---
-## Force PulseAudio driver for everything
+# Audio
+#export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
 #export SDL_AUDIODRIVER=pulse
 #export ALSOFT_DRIVERS=pulse
-#export PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
-
-## Set latency to match the "min-quantum" we set in init_audio.sh
-#export PIPEWIRE_LATENCY="256/48000"
+#export PIPEWIRE_LATENCY="512/48000"
 #export PULSE_LATENCY_MSEC=60
 
-
-# --- 3. Controller Mappings (Inline) ---
+# --- 4. Controller Mappings ---
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
 030000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,"
 
-# --- 4. Build Gamescope Arguments ---
-GS_ARGS="-e -f -w $WIDTH -h $HEIGHT -W $WIDTH -H $HEIGHT -r $REFRESH --force-grab-cursor"
+# --- 5. Generate Hyprland Monitor Config ---
+mkdir -p /home/steam/.config/hypr
 
 if [ "$HDR_ENABLED" = "true" ] || [ "$HDR_ENABLED" = "1" ]; then
-    GS_ARGS="$GS_ARGS --hdr-enabled --hdr-itm-enable"
+    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1,bitdepth,10" > /home/steam/.config/hypr/monitor.conf
 else
-    GS_ARGS="$GS_ARGS"
+    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1" > /home/steam/.config/hypr/monitor.conf
 fi
 
-# --- 5. Execute Gamescope ---
-echo "    Executing: gamescope $GS_ARGS"
-exec gamescope $GS_ARGS -- steam -gamepadui -noverifyfiles -fulldesktopres
+cp /usr/local/bin/scripts/hyprland.conf /home/steam/.config/hypr/hyprland.conf
+
+# --- 6. Execute Hyprland ---
+exec Hyprland

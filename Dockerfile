@@ -11,6 +11,12 @@ RUN pacman -Syu --noconfirm && \
     xorg-xwayland \
     mesa-utils \
     vulkan-tools \
+    # hyprland
+    hyprland \
+    xdg-desktop-portal-hyprland \
+    polkit \
+    egl-wayland \
+    vulkan-icd-loader \
     # --- AMD Support ---
     vulkan-radeon \
     lib32-vulkan-radeon \

@@ -30,9 +30,9 @@ if [ -x /usr/lib/systemd/systemd-udevd ]; then
     udevadm trigger
 fi
 
-# 6. Global Permissions
-chmod 666 /dev/uinput /dev/input/event* /dev/dri/card0 /dev/dri/renderD* 2>/dev/null || true
-chown root:video /dev/input/event* 2>/dev/null || true
+# 6. Global Permissions (CRITICAL FIX: Changed card0 to card*)
+chmod 666 /dev/uinput /dev/input/event* /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
+chown root:video /dev/input/event* /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
 
 # 7. Localization
 if [ -n "$GENERATE_LOCALE" ]; then
@@ -41,8 +41,7 @@ if [ -n "$GENERATE_LOCALE" ]; then
     export LANG="$GENERATE_LOCALE"
 fi
 
-# 8. PAM LIMITS FIX (CRITICAL FOR AUDIO)
-# This allows 'su - steam' to actually USE the rtprio/memlock limits provided by Docker
+# 8. PAM LIMITS FIX
 echo "Applying PAM Limits for steam user..."
 cat >> /etc/security/limits.conf <<EOF
 steam    soft    rtprio    99

@@ -3,11 +3,10 @@ set -e
 
 # --- 0. BOOT CLEANUP ---
 echo "--- [Boot] Cleaning up ---"
-killall -9 -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon || true
+killall -9 -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon hyprland || true
 rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart 2>/dev/null
 
 # --- 1. RUNTIME ENV ---
-# CRITICAL FIX: These variables tell seatd to ignore physical terminals
 export SEATD_VTBOUND=0
 export LIBSEAT_BACKEND=seatd
 
@@ -17,7 +16,7 @@ chmod 0700 "$XDG_RUNTIME_DIR"
 chown steam:steam "$XDG_RUNTIME_DIR"
 
 # Global Permissions
-chmod 666 /dev/uinput /dev/dri/card0 /dev/dri/renderD* /dev/input/event* 2>/dev/null || true
+chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* 2>/dev/null || true
 chown root:video /dev/input/event* 2>/dev/null || true
 
 # --- 2. INIT MODULES ---
@@ -35,14 +34,12 @@ while true; do
     # PHASE A: TEARDOWN
     # ----------------------------------------
     rm -f /tmp/trigger_restart
-    
-    # Kill previous session
-    killall -q sunshine gamescope steam seatd || true
+    killall -q sunshine gamescope steam seatd hyprland || true
     sleep 1
-    killall -9 -q sunshine gamescope steam seatd || true
+    killall -9 -q sunshine gamescope steam seatd hyprland || true
     
-    # Socket Cleanup
-    rm -rf /tmp/.X11-unix /tmp/.X0-lock /run/seatd.sock "$XDG_RUNTIME_DIR/gamescope-0"
+    # Socket Cleanup (Added Wayland)
+    rm -rf /tmp/.X11-unix /tmp/.X0-lock /run/seatd.sock "$XDG_RUNTIME_DIR/gamescope-0" "$XDG_RUNTIME_DIR"/wayland-*
     mkdir -p /tmp/.X11-unix
     chmod 1777 /tmp/.X11-unix
 
@@ -53,12 +50,17 @@ while true; do
     udevadm trigger --action=change --subsystem-match=drm
     sleep 0.5
 
-    # Start Seatd (Root Service)
+    # CRITICAL FIX: Refresh library cache so Vulkan finds NVIDIA drivers
+    ldconfig 2>/dev/null || true
+
+    # CRITICAL FIX: Udevadm trigger wipes our custom permissions. We MUST reapply them here!
+    chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* 2>/dev/null || true
+    
+    # Start Seatd
     echo "    [Supervisor] Starting seatd..."
     seatd -g video &
     SEATD_PID=$!
     
-    # Wait for seatd socket
     TIMEOUT=10
     while [ ! -S "/run/seatd.sock" ]; do
         sleep 0.1
@@ -70,37 +72,39 @@ while true; do
     # ----------------------------------------
     # PHASE C: LAUNCH USER SESSION
     # ----------------------------------------
-    echo "    [Supervisor] Launching Steam Session..."
-    # Run the session script as steam user
+    echo "    [Supervisor] Launching Steam Session (Hyprland)..."
     runuser -u steam -g steam -G video -G input -G audio -G render -- /usr/local/bin/scripts/steam-session.sh &
     SESSION_PID=$!
 
     # ----------------------------------------
     # PHASE D: SUNSHINE & WATCHDOG
     # ----------------------------------------
-    
-    # Wait for Gamescope socket
     TIMEOUT=30
-    while [ ! -S "$XDG_RUNTIME_DIR/gamescope-0" ] && [ $TIMEOUT -gt 0 ]; do
+    echo "    [Supervisor] Waiting for Wayland socket..."
+    
+    while [ -z "$(ls -A $XDG_RUNTIME_DIR/wayland-* 2>/dev/null)" ] && [ $TIMEOUT -gt 0 ]; do
         sleep 0.5
         ((TIMEOUT--))
     done
 
-    # Start Sunshine
-    if [ -S "$XDG_RUNTIME_DIR/gamescope-0" ]; then
-        # Exports for Sunshine
-        export WAYLAND_DISPLAY=gamescope-0
+    WAYLAND_SOCKET=$(ls -1 $XDG_RUNTIME_DIR/wayland-* 2>/dev/null | head -n 1 | awk -F/ '{print $NF}')
+
+    if [ -n "$WAYLAND_SOCKET" ]; then
+        export WAYLAND_DISPLAY=$WAYLAND_SOCKET
         export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
-        chmod 777 "$XDG_RUNTIME_DIR/gamescope-0"
+        chmod 777 "$XDG_RUNTIME_DIR/$WAYLAND_SOCKET"
+        
+        echo "    [Supervisor] Found $WAYLAND_SOCKET. Waiting for GPU stability..."
         sleep 2
+        
         echo "    [Supervisor] Starting Sunshine..."
         sunshine &
         SUNSHINE_PID=$!
     else
-        echo "    [Supervisor] Error: Gamescope socket not found."
+        echo "    [Supervisor] ERROR: Wayland socket failed to appear!"
     fi
 
-    # WATCHDOG LOOP
+    # WATCHDOG
     while kill -0 "$SESSION_PID" 2>/dev/null; do
         if [ -f "/tmp/trigger_restart" ]; then
             echo "    >>> RESTART TRIGGER DETECTED <<<"
@@ -110,8 +114,6 @@ while true; do
     done
     
     echo "--- [Supervisor] Session Ending... ---"
-    
-    # Graceful Shutdown
     [ -n "$SUNSHINE_PID" ] && kill "$SUNSHINE_PID" 2>/dev/null || true
     killall -9 -q steam || true
     
