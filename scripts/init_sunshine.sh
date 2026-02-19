@@ -49,6 +49,8 @@ if [ "$REQ_WIDTH" != "$CUR_WIDTH" ] || \
     echo "HEIGHT=$REQ_HEIGHT" >> "$CONFIG_FILE"
     echo "REFRESH=$REQ_REFRESH" >> "$CONFIG_FILE"
     echo "HDR_ENABLED=$REQ_HDR" >> "$CONFIG_FILE"
+
+    chown steam:steam "$CONFIG_FILE"
     
     # Touch the file to signal entrypoint.sh to restart services
     touch "$TRIGGER_FILE"
