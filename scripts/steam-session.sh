@@ -5,8 +5,9 @@ set -e
 unset WAYLAND_DISPLAY
 unset DISPLAY
 unset GDK_BACKEND
-unset QT_QPA_PLATFORM
+unset QT_QPA_PLATFOR
 
+export HOME=/home/steam
 # --- 1. Load Configuration ---
 WIDTH=1920
 HEIGHT=1080

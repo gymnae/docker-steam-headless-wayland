@@ -15,6 +15,10 @@ mkdir -p "$XDG_RUNTIME_DIR"
 chmod 0700 "$XDG_RUNTIME_DIR"
 chown steam:steam "$XDG_RUNTIME_DIR"
 
+# Fix Steam directories for volume mounts
+mkdir -p /home/steam/.config /home/steam/.steam /home/steam/.local/share/Steam
+chown -R steam:steam /home/steam/.config /home/steam/.steam /home/steam/.local
+
 # Global Permissions
 chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* /dev/nvidia* 2>/dev/null || true
 chown root:video /dev/input/event* 2>/dev/null || true
