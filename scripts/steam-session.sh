@@ -79,4 +79,4 @@ if [ -f "/usr/local/bin/scripts/hyprland.conf" ]; then
 fi
 
 # --- 6. Execute Hyprland ---
-exec Hyprland
+exec start-hyprland
