@@ -1,5 +1,6 @@
 steam-config
 steam-data
+steam-cache
 sunshine*
 archive
 docker-compose.yml

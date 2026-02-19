@@ -50,12 +50,15 @@ while true; do
     mkdir -p /tmp/.X11-unix
     chmod 1777 /tmp/.X11-unix
 
-    # ----------------------------------------
+ # ----------------------------------------
     # PHASE B: HARDWARE PREP
     # ----------------------------------------
     udevadm trigger --action=change --subsystem-match=input
     udevadm trigger --action=change --subsystem-match=drm
     sleep 0.5
+
+    # Refresh the library cache so Vulkan and EGL can finally "see" the drivers
+    ldconfig 2>/dev/null || true
 
     # Re-apply NVIDIA permissions after udevadm trigger wipes them!
     chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* /dev/nvidia* 2>/dev/null || true
@@ -72,6 +75,7 @@ while true; do
         if [ $TIMEOUT -le 0 ]; then echo "Seatd failed to start"; break; fi
     done
     chmod 777 /run/seatd.sock
+
 
     # ----------------------------------------
     # PHASE C: LAUNCH USER SESSION
@@ -98,6 +102,7 @@ while true; do
     if [ -n "$WAYLAND_SOCKET" ]; then
         export WAYLAND_DISPLAY=$WAYLAND_SOCKET
         export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
+        export EGL_PLATFORM=wayland
         chmod 777 "$XDG_RUNTIME_DIR/$WAYLAND_SOCKET"
         
         echo "    [Supervisor] Found $WAYLAND_SOCKET. Waiting for GPU stability..."

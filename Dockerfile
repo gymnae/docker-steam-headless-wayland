@@ -30,8 +30,8 @@ RUN pacman -Syu --noconfirm && \
     intel-media-driver \
     libva-intel-driver \
     # --- Nvidia Support - pinned to famnily ---
-    #nvidia-580xx-utils \
-    #lib32-nvidia-580xx-utils \
+    nvidia-utils \
+    lib32-nvidia-utils \
     libva-nvidia-driver \
     # Gaming Stack
     steam \
@@ -49,6 +49,10 @@ RUN pacman -Syu --noconfirm && \
     libinput \
     libinput-tools \
     && pacman -Scc --noconfirm
+
+# --- CRITICAL FIX: Create missing GBM symlink for Hyprland ---
+RUN mkdir -p /usr/lib/gbm && \
+    ln -sf /usr/lib/libnvidia-allocator.so.1 /usr/lib/gbm/nvidia-drm_gbm.so
 
 # 2. Install Game Device Rules
 RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \

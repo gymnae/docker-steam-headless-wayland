@@ -57,6 +57,7 @@ export WLR_NO_HARDWARE_CURSORS=1
 export PROTON_ENABLE_NVAPI=1
 export DXVK_ENABLE_NVAPI=1
 
+
 # --- 4. Controller Mappings ---
 # Your exact restored mapping for DualSense / Edge
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b2,y:b3,platform:Linux,
