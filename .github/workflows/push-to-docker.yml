@@ -46,7 +46,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,format=short
-            type=raw,value=hyprland,enable=${{ github.ref == 'refs/heads/gamescope' }}
+            type=raw,value=hyprland,enable=${{ github.ref == 'refs/heads/hyprland' }}
 
       - name: Build and push
         uses: docker/build-push-action@v5 
