@@ -30,8 +30,8 @@ RUN pacman -Syu --noconfirm && \
     intel-media-driver \
     libva-intel-driver \
     # --- Nvidia Support - pinned to famnily ---
-    nvidia-580xx-utils \
-    lib32-nvidia-580xx-utils \
+    #nvidia-580xx-utils \
+    #lib32-nvidia-580xx-utils \
     libva-nvidia-driver \
     # Gaming Stack
     steam \

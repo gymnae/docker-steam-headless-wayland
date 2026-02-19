@@ -20,12 +20,17 @@ chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* /dev/nv
 chown root:video /dev/input/event* 2>/dev/null || true
 
 # --- 2. INIT MODULES ---
-# Call the external modular scripts (which you prefer)
-for script in init_system init_audio init_proton init_sunshine watchdog; do
+# CRITICAL FIX: Removed 'watchdog' from this synchronous loop
+for script in init_system init_audio init_proton init_sunshine; do
     if [ -x "/usr/local/bin/scripts/${script}.sh" ]; then
         /usr/local/bin/scripts/${script}.sh
     fi
 done
+
+# Start Watchdog in the BACKGROUND so it doesn't block the boot process
+if [ -x "/usr/local/bin/scripts/watchdog.sh" ]; then
+    /usr/local/bin/scripts/watchdog.sh &
+fi
 
 # --- 3. SUPERVISOR LOOP ---
 while true; do
@@ -52,7 +57,7 @@ while true; do
     udevadm trigger --action=change --subsystem-match=drm
     sleep 0.5
 
-    # CRITICAL FIX: Re-apply NVIDIA permissions after udevadm trigger wipes them!
+    # Re-apply NVIDIA permissions after udevadm trigger wipes them!
     chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* /dev/nvidia* 2>/dev/null || true
 
     # Start Seatd
