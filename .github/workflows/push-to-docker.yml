@@ -2,20 +2,20 @@ name: Publish Docker
 on:
   push:
     branches:
-      - main
+      - gamescope
+      - hyprland
   schedule:
     - cron: '0 2 * * 0' # Weekly on Sundays at 02:00
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
+
 jobs:
   build:
-    #if: ${{ github.event_name != 'schedule'}}
     runs-on: ubuntu-latest
     steps:
-      - 
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      - 
-        name: Free Disk Space
+
+      - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: true
@@ -25,37 +25,40 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
-      -
-        name: Set up QEMU
+          
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      -
-        name: Login to Docker Hub
+
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - 
-        name: Cache Docker layers
-        uses: actions/cache@v4
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('**/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      -
-        name: Build and push
-        uses: docker/build-push-action@v4
+          images: gymnae/steam-headless
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,value=hyprland,enable=${{ github.ref == 'refs/heads/gamescope' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5 
         with:
           context: .
           platforms: linux/amd64
           push: true
-          tags: gymnae/steam-headless:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,modex=max
-          
+          cache-to: type=gha,mode=max
+
   workflow-keepalive:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
