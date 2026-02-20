@@ -51,10 +51,10 @@ export LIBSEAT_BACKEND=seatd
 export XDG_SEAT=seat0
 
 # NVIDIA Environment Variables
-export GBM_BACKEND=nvidia-drm
-export LIBVA_DRIVER_NAME=nvidia
-export __GLX_VENDOR_LIBRARY_NAME=nvidia
-export WLR_NO_HARDWARE_CURSORS=1
+#export GBM_BACKEND=nvidia-drm
+#export LIBVA_DRIVER_NAME=nvidia
+#export __GLX_VENDOR_LIBRARY_NAME=nvidia
+#export WLR_NO_HARDWARE_CURSORS=1
 export PROTON_ENABLE_NVAPI=1
 export DXVK_ENABLE_NVAPI=1
 
