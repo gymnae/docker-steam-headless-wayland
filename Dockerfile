@@ -5,7 +5,7 @@ FROM cachyos/cachyos-v3:latest
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
     # Core Tools
-    sudo vim openssh curl tar git \
+    sudo vim openssh curl tar git paru \
     # Graphics (Universal)
     gamescope \
     xorg-xwayland \
