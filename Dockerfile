@@ -40,6 +40,7 @@ RUN pacman -Syu --noconfirm && \
     proton-cachyos \
     mangohud \
     protontricks \
+    cachyos-v3/lib32-zlib-ng-compat \
     # Audio
     rtkit \
     pipewire pipewire-pulse wireplumber \
@@ -56,7 +57,7 @@ RUN mkdir -p /usr/lib/gbm && \
 
 # 2. Install Game Device Rules
 RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
-    cp /tmp/gdu/*.rules /etc/udev/rules.d/ && \
+    cp /tmp/gdu/src/*.rules /etc/udev/rules.d/ && \
     rm -rf /tmp/gdu
 
 # 3. Install Proton-GE
