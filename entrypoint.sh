@@ -25,7 +25,7 @@ chown root:video /dev/input/event* 2>/dev/null || true
 
 # --- 2. INIT MODULES ---
 # CRITICAL FIX: Removed 'watchdog' from this synchronous loop
-for script in init_system init_audio init_proton init_sunshine; do
+for script in init_system init_audio init_proton init_sunshine init_filebrowser; do
     if [ -x "/usr/local/bin/scripts/${script}.sh" ]; then
         /usr/local/bin/scripts/${script}.sh
     fi
@@ -118,6 +118,10 @@ while true; do
     else
         echo "    [Supervisor] ERROR: Wayland socket failed to appear!"
     fi
+
+    echo "    [Supervisor] Starting File Browser..."
+    runuser -u steam -g steam -- filebrowser -a 0.0.0.0 -p 8080 -d /home/steam/.config/filebrowser.db &
+    FILEBROWSER_PID=$!
 
     # WATCHDOG
     while kill -0 "$SESSION_PID" 2>/dev/null; do
