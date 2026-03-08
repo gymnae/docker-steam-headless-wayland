@@ -46,7 +46,7 @@ RUN pacman -Syu --noconfirm && \
 
 # 2. Install Game Device Rules
 RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
-    cp /tmp/gdu/*.rules /etc/udev/rules.d/ && \
+    cp /tmp/gdu/src/*.rules /etc/udev/rules.d/ && \
     rm -rf /tmp/gdu
 
 # 3. Install Proton-GE
