@@ -1,0 +1,41 @@
+arch: amd64
+cores: 6
+dev1: /dev/uhid,gid=0,uid=0
+dev2: /dev/nvidia-caps/nvidia-cap1
+dev3: /dev/nvidia-caps/nvidia-cap2
+dev4: /dev/uinput,gid=0,uid=0
+dev5: /dev/dri/renderD128,gid=105,uid=0
+dev6: /dev/dri/card1,gid=39,uid=0
+features: fuse=1,nesting=1
+hostname: steamheadless
+memory: 16384
+mp2: /srv/drivers,mp=/mnt/drivers,mountoptions=discard
+mp3: unraidiscsisamsung850lvm:vm-122-disk-0,mp=/mnt/localgames,mountoptions=discard;lazytime,size=450G
+net0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth
+ostype: fedora
+rootfs: local-zfs:subvol-122-disk-0,mountoptions=discard;lazytime,size=50G
+swap: 16384
+tty: 2
+lxc.mount.entry: /dev/input dev/input none bind,optional,create=dir
+lxc.mount.entry: /run/udev mnt/udev none bind,optional,create=dir
+lxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file
+lxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file
+lxc.mount.entry: /dev/nvram dev/nvram none bind,optional,create=file
+lxc.mount.entry: /dev/tty10 dev/tty8 none bind,optional,create=file
+lxc.mount.entry: /dev/tty11 dev/tty0 none bind,optional,create=file
+lxc.cgroup2.devices.allow: c 4:* rwm
+lxc.cgroup2.devices.allow: c 13:* rwm
+lxc.cgroup2.devices.allow: c 195:* rwm
+lxc.cgroup2.devices.allow: c 237:* rwm
+lxc.cgroup2.devices.allow: c 510:* rwm
+lxc.cgroup2.devices.allow: c 235:* rwm
+lxc.cgroup2.devices.allow: c 223:* rwm
+lxc.cgroup2.devices.allow: c 239:* rwm
+lxc.cgroup2.devices.allow: c 226:* rwm
+lxc.apparmor.profile: unconfined
+lxc.cgroup2.devices.allow: a
+lxc.cap.drop:
+lxc.apparmor.raw: mount
