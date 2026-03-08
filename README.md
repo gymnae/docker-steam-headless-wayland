@@ -22,6 +22,8 @@ To create a next-generation headless gaming container that moves away from the l
 **Key Advantages:**
 * **Rolling Release:** Based on **CachyOS** (Arch Linux) for day-one driver updates and CPU optimizations (x86-64-v3).
 * **Hyprland Native:** Uses a highly stripped-down Hyprland/Aquamarine backend for pristine fullscreen window management and instant focus-stealing. No desktop environment bloat.
+* **Includes Lutris** With cachyos-wine for Steam indepdendent gaming and easy management of Wine targets
+* **Includes Web based Filebrowser** Available on Port 8080 and based on filebrowser.org
 * **Low Latency:**
     * **Video:** NVENC via KMS (Direct GPU access via Sunshine).
     * **Audio:** PipeWire via shared Unix Sockets.
