@@ -11,6 +11,9 @@ RUN pacman -Syu --noconfirm && \
     xorg-xwayland \
     mesa-utils \
     vulkan-tools \
+    # Lutris & Standalone wine
+    wine-cachyos \
+    lutris \
     # --- AMD Support ---
     vulkan-radeon \
     lib32-vulkan-radeon \
