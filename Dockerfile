@@ -17,6 +17,9 @@ RUN pacman -Syu --noconfirm && \
     polkit \
     egl-wayland \
     vulkan-icd-loader \
+    # standalone wine & lutris
+    wine-cachyos \
+    lutris \
     # --- AMD Support ---
     vulkan-radeon \
     lib32-vulkan-radeon \
