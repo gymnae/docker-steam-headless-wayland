@@ -20,6 +20,7 @@ su - steam -c "
             --address=\"0.0.0.0\" \
             --port=\"8080\" \
             --root=\"/home/steam\" \
+            --disable-exec=false \
             --log=\"/home/steam/filebrowser.log\" \
             --auth.method=\"noauth\"
             
