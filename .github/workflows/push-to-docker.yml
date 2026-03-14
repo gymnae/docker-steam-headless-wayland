@@ -2,7 +2,7 @@ name: Publish Docker
 on:
   push:
     branches:
-      - main
+      - hyprland
   schedule:
     - cron: '0 2 * * 0' # Weekly on Sundays at 02:00
   workflow_dispatch: # Allows manual triggering
