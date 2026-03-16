@@ -32,9 +32,7 @@ RUN pacman -Syu --noconfirm && \
     lib32-vulkan-intel \
     intel-media-driver \
     libva-intel-driver \
-    # --- Nvidia Support - pinned to famnily ---
-    nvidia-utils \
-    lib32-nvidia-utils \
+    # --- Nvidia Support - pinned to famnily ---s
     libva-nvidia-driver \
     # Gaming Stack
     steam \

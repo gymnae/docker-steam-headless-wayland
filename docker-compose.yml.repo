@@ -43,13 +43,6 @@ services:
       # NOTE: If you use the nvidia container toolkit, this is not needed.
       #       Installing the nvidia container toolkit is the recommended method for running this container
       - /dev/dri:/dev/dri
-      - /dev/nvidia0
-      - /dev/nvidiactl
-      - /dev/nvidia-modeset
-      - /dev/nvidia-uvm
-      - /dev/nvidia-uvm-tools
-      - /dev/nvidia-caps/nvidia-cap1
-      - /dev/nvidia-caps/nvidia-cap2
     # Ensure container access to devices 13:*
     device_cgroup_rules:
       - 'c 13:* rmw'
@@ -66,3 +59,10 @@ services:
       - TZ=Europe/Berlin
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, compute, video, utility, graphics, display]
