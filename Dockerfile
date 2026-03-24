@@ -10,7 +10,9 @@ RUN pacman -Syu --noconfirm && \
     gamescope \
     xorg-xwayland \
     mesa-utils \
-    vulkan-tools \
+    vulkan-tools 
+    \vulkan-mesa-layers \     
+    lib32-vulkan-mesa-layers \
     # hyprland
     hyprland \
     xdg-desktop-portal-hyprland \
