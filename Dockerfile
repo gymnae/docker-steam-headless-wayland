@@ -11,7 +11,7 @@ RUN pacman -Syu --noconfirm && \
     xorg-xwayland \
     mesa-utils \
     vulkan-tools 
-    \vulkan-mesa-layers \     
+    vulkan-mesa-layers \     
     lib32-vulkan-mesa-layers \
     # hyprland
     hyprland \
