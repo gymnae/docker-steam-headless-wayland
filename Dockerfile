@@ -10,9 +10,9 @@ RUN pacman -Syu --noconfirm && \
     gamescope \
     xorg-xwayland \
     mesa-utils \
-    vulkan-tools 
-    vulkan-mesa-layers \     
-    lib32-vulkan-mesa-layers \
+    mesa \
+    lib32-mesa \
+    vulkan-tools \
     # hyprland
     hyprland \
     xdg-desktop-portal-hyprland \
@@ -22,16 +22,8 @@ RUN pacman -Syu --noconfirm && \
     # standalone wine & lutris
     wine-cachyos \
     lutris \
-    # --- AMD Support ---
     vulkan-radeon \
-    lib32-vulkan-radeon \
-    libva-mesa-driver \
-    lib32-libva-mesa-driver \
-    mesa-vdpau \
-    lib32-mesa-vdpau \
-    # --- Intel Support ---
-    vulkan-intel \
-    lib32-vulkan-intel \
+    # --- Intel Support (CachyOS Git Defaults) ---
     intel-media-driver \
     libva-intel-driver \
     # --- Nvidia Support - pinned to famnily ---
