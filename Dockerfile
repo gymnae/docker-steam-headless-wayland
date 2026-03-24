@@ -22,11 +22,15 @@ RUN pacman -Syu --noconfirm && \
     # standalone wine & lutris
     wine-cachyos \
     lutris \
+    # Radeon
     vulkan-radeon \
-    # --- Intel Support (CachyOS Git Defaults) ---
+    lib32-vulkan-radeon \
+    # --- Intel Support  ---
+    vulkan-intel \
+    lib32-vulkan-intel \
     intel-media-driver \
     libva-intel-driver \
-    # --- Nvidia Support - pinned to famnily ---
+    # --- Nvidia Support ---
     nvidia-utils \
     lib32-nvidia-utils \
     libva-nvidia-driver \
