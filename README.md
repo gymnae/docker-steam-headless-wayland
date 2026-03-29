@@ -115,6 +115,8 @@ lxc.cgroup2.devices.allow: c 195:* rwm
 lxc.cgroup2.devices.allow: c 510:* rwm
 # uhid / uinput 
 lxc.cgroup2.devices.allow: c 10:* rwm
+# mice, keyboard etc
+lxc.cgroup2.devices.allow: c 13:* rwm
 # nvidia-caps
 lxc.cgroup2.devices.allow: c 235:* rwm
 # dev/dri
