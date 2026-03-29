@@ -16,7 +16,7 @@ This image does the following:
  5. Supports multiple concurrent Gamepad inputs, Keyboard, and Mouse
  6. Keyboard locale and layout can be adjusted on the fly
  7. Currently optimized for Steam
- 8.  Auxiliary tooling is included: Lutris, Proton-GE
+ 8. Auxiliary tooling is included: Lutris, Proton-GE
  9. Primarily designed to run inside an LXC / Docker environment on Proxmox
 10. Integrated [file browser ](https://filebrowser.org/index.html)for directly fiddling with config files and data in the container
 11. **Should also work on any Linux Docker Host - see requirements and limitations**
@@ -25,10 +25,11 @@ This image does the following:
 
 # Motivation
 
+* **Enable multi-tenant use for GPUs without vGPU support (e.g., NVIDIA GeForce 3000 and newer)**
 * To build a modern alternative to X11 and VNC-based headless streaming solutions
 * Enable HDR streaming
 * Single-purpose Design: Gaming
-* Enable multi-tenant use for GPUs without vGPU support (e.g., NVIDIA GeForce 3000 and newer)
+* Your GPU can be used for other purposes in parallel, such as machine learning and inference - it is not lost to a virtual machine or VFIO passthrough
 * See how well vibe coding can deal with changing requirements and bleeding-edge stacks
 
 ## Requirements
