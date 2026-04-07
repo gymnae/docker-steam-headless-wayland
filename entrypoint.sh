@@ -1,8 +1,15 @@
 #!/bin/bash
 set -e
 
+# Disable core dumps to prevent core.xxx files on forced restarts
+ulimit -c 0
+
 # --- 0. BOOT CLEANUP ---
 echo "--- [Boot] Cleaning up ---"
+# Polite ask:
+killall -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon hyprland || true
+sleep 1 
+# Force kill only the stubborn remnants:
 killall -9 -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon hyprland || true
 rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart 2>/dev/null
 
