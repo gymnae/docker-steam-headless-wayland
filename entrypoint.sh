@@ -52,9 +52,9 @@ while true; do
     # ----------------------------------------
     rm -f /tmp/trigger_restart
     
-    killall -q sunshine gamescope steam seatd hyprland || true
-    sleep 1
-    killall -9 -q sunshine gamescope steam seatd hyprland || true
+    killall -q sunshine gamescope steam steamwebhelper seatd hyprland || true
+    sleep 3
+    killall -9 -q sunshine gamescope steam steamwebhelper seatd hyprland || true
     
     # Socket Cleanup
     rm -rf /tmp/.X11-unix /tmp/.X0-lock /run/seatd.sock "$XDG_RUNTIME_DIR/gamescope-0" "$XDG_RUNTIME_DIR"/wayland-*
