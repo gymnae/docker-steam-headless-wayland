@@ -99,7 +99,6 @@ ENV LC_ALL=en_US.UTF-8
 
 ENV XDG_RUNTIME_DIR=/run/user/1000 \
     PULSE_SERVER=unix:/run/user/1000/pulse/native \
-    WAYLAND_DISPLAY=wayland-0 \
     MOZ_ENABLE_WAYLAND=1 \
     QT_QPA_PLATFORM=wayland
 USER root
