@@ -12,6 +12,21 @@ if [ ! -f /etc/machine-id ]; then dbus-uuidgen > /etc/machine-id; fi
 mkdir -p /var/lib/dbus
 dbus-uuidgen > /var/lib/dbus/machine-id
 
+# 1. Grab the numerical GIDs of the mounted devices
+HOST_VIDEO_GID=$(stat -c "%g" /dev/dri/card1 2>/dev/null || stat -c "%g" /dev/dri/card0 2>/dev/null || echo "39")
+HOST_RENDER_GID=$(stat -c "%g" /dev/dri/renderD128 2>/dev/null || echo "105")
+
+# 2. Create dummy groups with those exact IDs and add the steam user
+if [ -n "$HOST_VIDEO_GID" ]; then
+    groupadd -g $HOST_VIDEO_GID host_video 2>/dev/null || true
+    usermod -aG $HOST_VIDEO_GID steam
+fi
+
+if [ -n "$HOST_RENDER_GID" ]; then
+    groupadd -g $HOST_RENDER_GID host_render 2>/dev/null || true
+    usermod -aG $HOST_RENDER_GID steam
+fi
+
 # 3. DBus
 mkdir -p /run/dbus
 rm -f /run/dbus/pid
