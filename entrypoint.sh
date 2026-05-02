@@ -7,10 +7,10 @@ ulimit -c 0
 # --- 0. BOOT CLEANUP ---
 echo "--- [Boot] Cleaning up ---"
 # Polite ask:
-killall -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon hyprland || true
-sleep 1 
+killall -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon hyprland || true
+sleep 2 
 # Force kill only the stubborn remnants:
-killall -9 -q sunshine gamescope steam seatd pipewire wireplumber rtkit-daemon hyprland || true
+killall -s 9 -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon hyprland || true
 rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart 2>/dev/null
 
 # --- 1. RUNTIME ENV ---
@@ -54,7 +54,7 @@ while true; do
     
     killall -q sunshine gamescope steam steamwebhelper seatd hyprland || true
     sleep 3
-    killall -9 -q sunshine gamescope steam steamwebhelper seatd hyprland || true
+    killall -s 9 -q sunshine gamescope steam steamwebhelper seatd hyprland || true
     
     # Socket Cleanup
     rm -rf /tmp/.X11-unix /tmp/.X0-lock /run/seatd.sock "$XDG_RUNTIME_DIR/gamescope-0" "$XDG_RUNTIME_DIR"/wayland-*

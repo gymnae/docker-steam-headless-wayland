@@ -19,7 +19,8 @@ RUN pacman -Syu --noconfirm && \
     polkit \
     egl-wayland \
     vulkan-icd-loader \
-    # standalone wine & lutris
+    libglvnd \
+   # standalone wine & lutris
     wine-cachyos \
     lutris \
     # Radeon
@@ -53,8 +54,8 @@ RUN pacman -Syu --noconfirm && \
     && pacman -Scc --noconfirm
 
 # --- CRITICAL FIX: Create missing GBM symlink for Hyprland ---
-RUN mkdir -p /usr/lib/gbm && \
-    ln -sf /usr/lib/libnvidia-allocator.so.1 /usr/lib/gbm/nvidia-drm_gbm.so
+#RUN mkdir -p /usr/lib/gbm && \
+#    ln -sf /usr/lib/libnvidia-allocator.so.1 /usr/lib/gbm/nvidia-drm_gbm.so
 
 # 2. Install Game Device Rules
 RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
@@ -106,8 +107,6 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# 7. Environment Variables
-# CRITICAL FIX: Added 'SteamDeck=1' to the list.
 ENV XDG_RUNTIME_DIR=/run/user/1000 \
     PULSE_SERVER=unix:/run/user/1000/pulse/native \
     WAYLAND_DISPLAY=wayland-0 \
