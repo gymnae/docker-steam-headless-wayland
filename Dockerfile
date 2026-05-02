@@ -53,10 +53,6 @@ RUN pacman -Syu --noconfirm && \
     libinput-tools \
     && pacman -Scc --noconfirm
 
-# --- CRITICAL FIX: Create missing GBM symlink for Hyprland ---
-#RUN mkdir -p /usr/lib/gbm && \
-#    ln -sf /usr/lib/libnvidia-allocator.so.1 /usr/lib/gbm/nvidia-drm_gbm.so
-
 # 2. Install Game Device Rules
 RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
     cp /tmp/gdu/src/*.rules /etc/udev/rules.d/ && \
@@ -79,17 +75,11 @@ RUN useradd -m -G wheel,audio,video,input,storage,render -s /bin/bash steam && \
     setcap 'cap_sys_admin,cap_net_admin+p' $(readlink -f /usr/bin/sunshine) && \
     setcap 'cap_sys_nice+eip' $(readlink -f /usr/bin/gamescope)
 
-## 5. Inject PipeWire Low Latency Config
-#RUN mkdir -p /etc/pipewire/pipewire.conf.d
-#COPY config/low-latency.conf /etc/pipewire/pipewire.conf.d/99-lowlatency.conf
-
 # --- Install File Browser ---
 RUN curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash && \
     setcap 'cap_net_bind_service=+ep' /usr/local/bin/filebrowser
 
 # 6. Inject Scripts
-# CRITICAL FIX: We copy the ENTIRE scripts folder. 
-# Your previous version missed init_sunshine.sh, watchdog.sh, etc.
 COPY scripts/ /usr/local/bin/scripts/
 RUN chmod +x /usr/local/bin/scripts/*.sh
 

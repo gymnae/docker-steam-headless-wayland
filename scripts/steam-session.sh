@@ -39,7 +39,6 @@ NVIDIA_CARD=$(grep -l "0x10de" /sys/class/drm/card*/device/vendor 2>/dev/null | 
 if [ -n "$NVIDIA_CARD" ]; then
     echo "    Multi-GPU Fix: Forcing Compositor to use NVIDIA (/dev/dri/$NVIDIA_CARD)"
     export AQ_DRM_DEVICES="/dev/dri/$NVIDIA_CARD"
-    export WLR_DRM_DEVICES="/dev/dri/$NVIDIA_CARD"
 fi
 
 # --- 3. Environment Variables ---
@@ -51,14 +50,11 @@ export LIBSEAT_BACKEND=seatd
 export XDG_SEAT=seat0
 
 # NVIDIA Environment Variables
-#export GBM_BACKEND=nvidia-drm
-#export LIBVA_DRIVER_NAME=nvidia
-#export __GLX_VENDOR_LIBRARY_NAME=nvidia
-#export __EGL_VENDOR_LIBRARY_NAME=nvidia
-#export GBM_BACKEND=nvidia-drm
-#export WLR_NO_HARDWARE_CURSORS=1
-#export PROTON_ENABLE_NVAPI=1
-#export DXVK_ENABLE_NVAPI=1
+export GBM_BACKEND=nvidia-drm
+export LIBVA_DRIVER_NAME=nvidia
+export PROTON_ENABLE_NVAPI=1
+export DXVK_ENABLE_NVAPI=1
+export AQ_NO_MODIFIERS=1
 
 # --- 3. Controller Mappings (Inline) ---
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
@@ -70,7 +66,8 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller
 mkdir -p /home/steam/.config/hypr
 
 if [ "$HDR_ENABLED" = "true" ] || [ "$HDR_ENABLED" = "1" ]; then
-    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1,bitdepth,10,cm, hdr, sdrbrightness, 1.2, sdrsaturation, 0.98" > /home/steam/.config/hypr/monitor.conf
+    # Removed spaces in "cm,hdr,sdrbrightness,1.2,sdrsaturation,0.98"
+    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1,bitdepth,10,cm,hdr,sdrbrightness,1.2,sdrsaturation,0.98" > /home/steam/.config/hypr/monitor.conf
 else
     echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1" > /home/steam/.config/hypr/monitor.conf
 fi
