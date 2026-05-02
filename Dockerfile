@@ -40,7 +40,7 @@ RUN pacman -Syu --noconfirm && \
     # Gaming Stack
     steam \
     ffmpeg \
-    sunshine \
+    lizardbyte-beta/sunshine-git \
     proton-cachyos \
     mangohud \
     protontricks \
