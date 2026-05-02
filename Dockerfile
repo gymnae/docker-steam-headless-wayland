@@ -102,9 +102,9 @@ ENV LC_ALL=en_US.UTF-8
 ENV XDG_RUNTIME_DIR=/run/user/1000 \
     PULSE_SERVER=unix:/run/user/1000/pulse/native \
     MOZ_ENABLE_WAYLAND=1 \
-    QT_QPA_PLATFORM=wayland \
-    NVIDIA_VISIBLE_DEVICES=all \
-    NVIDIA_DRIVER_CAPABILITIES=all
+    QT_QPA_PLATFORM=wayland
+  #  NVIDIA_VISIBLE_DEVICES=all \
+  #  NVIDIA_DRIVER_CAPABILITIES=all
 USER root
 WORKDIR /home/steam
 ENTRYPOINT ["/entrypoint.sh"]

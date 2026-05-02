@@ -50,10 +50,10 @@ export LIBSEAT_BACKEND=seatd
 export XDG_SEAT=seat0
 
 # NVIDIA Environment Variables
-export GBM_BACKEND=nvidia-drm
-export LIBVA_DRIVER_NAME=nvidia
-export PROTON_ENABLE_NVAPI=1
-export DXVK_ENABLE_NVAPI=1
+#export GBM_BACKEND=nvidia-drm
+#export LIBVA_DRIVER_NAME=nvidia
+#export PROTON_ENABLE_NVAPI=1
+#export DXVK_ENABLE_NVAPI=1
 #export AQ_NO_MODIFIERS=1
 
 # --- 3. Controller Mappings (Inline) ---

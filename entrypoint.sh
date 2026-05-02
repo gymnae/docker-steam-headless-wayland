@@ -53,7 +53,7 @@ while true; do
     rm -f /tmp/trigger_restart
     
     killall -q sunshine gamescope steam steamwebhelper seatd hyprland || true
-    sleep 3
+    sleep 2
     killall -s 9 -q sunshine gamescope steam steamwebhelper seatd hyprland || true
     
     # Socket Cleanup
