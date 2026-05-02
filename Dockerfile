@@ -1,6 +1,8 @@
 # /Dockerfile
 FROM cachyos/cachyos-v3:latest
 
+RUN printf "\n[lizardbyte-beta]\nSigLevel = Optional\nServer = https://github.com/LizardByte/pacman-repo/releases/download/beta\n" >> /etc/pacman.conf
+
 # 1. Install Core & Universal Gaming Packages
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
