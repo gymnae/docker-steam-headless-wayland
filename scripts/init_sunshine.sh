@@ -37,13 +37,14 @@ fi
 
 echo "[$(date)] Request: ${REQ_WIDTH}x${REQ_HEIGHT} @ ${REQ_REFRESH} (HDR: $REQ_HDR)" >> $LOGfile
 
-# CHECK: Only restart if something changed
+# CHECK: Only restart if config changed OR if Hyprland is currently dead
 if [ "$REQ_WIDTH" != "$CUR_WIDTH" ] || \
    [ "$REQ_HEIGHT" != "$CUR_HEIGHT" ] || \
    [ "$REQ_REFRESH" != "$CUR_REFRESH" ] || \
-   [ "$REQ_HDR" != "$CUR_HDR" ]; then
+   [ "$REQ_HDR" != "$CUR_HDR" ] || \
+   ! pgrep -x "Hyprland" > /dev/null; then
 
-    echo "    -> Change detected! Updating config and triggering restart." >> $LOGfile
+    echo "    -> Change detected or session dead! Triggering start." >> $LOGfile
     
     echo "WIDTH=$REQ_WIDTH" > "$CONFIG_FILE"
     echo "HEIGHT=$REQ_HEIGHT" >> "$CONFIG_FILE"
@@ -52,13 +53,31 @@ if [ "$REQ_WIDTH" != "$CUR_WIDTH" ] || \
 
     chown steam:steam "$CONFIG_FILE"
     
-    # Touch the file to signal entrypoint.sh to restart services
+    # Touch the file to signal the supervisor/entrypoint to execute Script 2
     touch "$TRIGGER_FILE"
 else
-    echo "    -> Config matches active session. No restart needed." >> $LOGfile
+    echo "    -> Config matches and session is active. No restart needed." >> $LOGfile
 fi
 EOF
 chmod +x "$SWITCH_SCRIPT"
+
+# 1.5 Power-Saving Shutdown Script
+STOP_SCRIPT="/usr/local/bin/stop_stream.sh"
+cat > "$STOP_SCRIPT" <<'EOF'
+#!/bin/bash
+echo "[$(date)] Moonlight disconnected. Shutting down Wayland and Steam..." >> /tmp/sunshine_switch.log
+
+# Gracefully ask Steam to exit first to prevent save data/cloud sync corruption
+killall -15 steam || true
+killall -15 steamwebhelper || true
+
+# Give Steam 3 seconds to sync cloud saves
+sleep 3
+
+# Kill the compositor, which releases the Nvidia GPU
+killall -15 Hyprland || true
+EOF
+chmod +x "$STOP_SCRIPT"
 
 # 2. Main Config
 cat > "$CONF_FILE" <<EOF
@@ -80,7 +99,12 @@ cat > "$APPS_FILE" <<EOF
         {
             "name": "Steam Gaming",
             "output": "sunshine.log",
-            "detached": [ "$SWITCH_SCRIPT" ],
+            "prep-cmd": [
+                {
+                    "do": "$SWITCH_SCRIPT",
+                    "undo": "$STOP_SCRIPT"
+                }
+            ],
             "image-path": ""
         }
     ]
