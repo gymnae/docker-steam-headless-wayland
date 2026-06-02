@@ -119,6 +119,23 @@ while true; do
         echo "    [Supervisor] Found $WAYLAND_SOCKET. Waiting for GPU stability..."
         sleep 2
         
+        LOCAL_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $7}' || hostname -I | awk '{print $1}')
+        SUNSHINE_CONF="/home/steam/.config/sunshine/sunshine.conf"
+        
+        # 2. Ensure the config file exists
+        mkdir -p /home/steam/.config/sunshine
+        touch "$SUNSHINE_CONF"
+        
+        # 3. Strip out any old CSRF rules to prevent duplication on reboot
+        sed -i '/^csrf_allowed_origins/d' "$SUNSHINE_CONF"
+        
+        # 4. Inject the current IP address
+        if [ -n "$LOCAL_IP" ]; then
+            echo "    [Supervisor] Whitelisting Sunshine Web UI for IP: $LOCAL_IP"
+            echo "csrf_allowed_origins = https://${LOCAL_IP}:47990" >> "$SUNSHINE_CONF"
+        fi
+        chown steam:steam "$SUNSHINE_CONF"
+        
         echo "    [Supervisor] Starting Sunshine..."
         sunshine &
         SUNSHINE_PID=$!
