@@ -41,7 +41,6 @@ RUN pacman -Syu --noconfirm && \
     steam \
     ffmpeg \
     lizardbyte-beta/sunshine-git \
-    proton-cachyos \
     mangohud \
     protontricks \
     cachyos-v3/lib32-zlib-ng-compat \
