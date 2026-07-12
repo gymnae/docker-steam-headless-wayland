@@ -5,7 +5,7 @@ RUN printf "\n[lizardbyte-beta]\nSigLevel = Optional\nServer = https://github.co
 
 # 1. Install Core & Universal Gaming Packages
 RUN pacman -Syu --noconfirm && \
-    pacman -S --noconfirm \
+    pacman -S --noconfirm --assume-installed lib32-sdl2_image \
     # Core Tools
     sudo vim openssh curl tar git paru \
     # Graphics (Universal)
@@ -41,6 +41,7 @@ RUN pacman -Syu --noconfirm && \
     steam \
     ffmpeg \
     lizardbyte-beta/sunshine-git \
+    proton-cachyos \
     mangohud \
     protontricks \
     cachyos-v3/lib32-zlib-ng-compat \
