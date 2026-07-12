@@ -3,12 +3,6 @@ FROM cachyos/cachyos-v3:latest
 
 RUN printf "\n[lizardbyte-beta]\nSigLevel = Optional\nServer = https://github.com/LizardByte/pacman-repo/releases/download/beta\n" >> /etc/pacman.conf
 
-RUN echo -e "\n[cachyos-multilib]\nInclude = /etc/pacman.d/cachyos-mirrorlist" >> /etc/pacman.conf && \
-    echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
-
-# Fix 2: Force pacman to pick the native cachyos provider when duplicates (like liblsmash) exist
-RUN sed -i 's/#\s*Opendedup/Opendedup/' /etc/pacman.conf || true
-
 # 1. Install Core & Universal Gaming Packages
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
