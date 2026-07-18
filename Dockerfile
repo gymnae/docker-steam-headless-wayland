@@ -63,11 +63,11 @@ RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
 # 3. Install Proton-GE
 RUN mkdir -p /usr/share/steam/compatibilitytools.d/ && \
     curl -s https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest \
-    | grep "browser_download_url" | grep ".tar.gz" | head -n 1 | cut -d : -f 2,3 | tr -d \" \
+    | grep "browser_download_url" | grep ".tar.gz" | grep -v "aarch64" | head -n 1 | cut -d : -f 2,3 | tr -d \" \
     | xargs curl -L -o /tmp/proton-ge.tar.gz && \
     tar -xf /tmp/proton-ge.tar.gz -C /usr/share/steam/compatibilitytools.d/ && \
     rm /tmp/proton-ge.tar.gz
-
+    
 # 4. Setup User 'steam'
 # CRITICAL: 'render' group is included here. Do not remove it.
 RUN useradd -m -G wheel,audio,video,input,storage,render -s /bin/bash steam && \
