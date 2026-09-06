@@ -63,7 +63,7 @@ RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \
 # 3. Install Proton-GE
 RUN mkdir -p /usr/share/steam/compatibilitytools.d/ && \
     curl -s https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest \
-    | grep "browser_download_url" | grep ".tar.gz" | grep -v "aarch64" | head -n 1 | cut -d : -f 2,3 | tr -d \" \
+    | grep -o 'https://[^"]*\.tar\.gz' | grep -v 'aarch64' | head -n 1 \
     | xargs curl -L -o /tmp/proton-ge.tar.gz && \
     tar -xf /tmp/proton-ge.tar.gz -C /usr/share/steam/compatibilitytools.d/ && \
     rm /tmp/proton-ge.tar.gz
