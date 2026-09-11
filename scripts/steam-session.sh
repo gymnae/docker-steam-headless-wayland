@@ -62,19 +62,17 @@ export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller
 030000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
 030000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,"
 
-# --- 5. Generate Hyprland Monitor Config ---
+# --- 5. Prepare Hyprland Runtime Config ---
 mkdir -p /home/steam/.config/hypr
 
-if [ "$HDR_ENABLED" = "true" ] || [ "$HDR_ENABLED" = "1" ]; then
-    # Removed spaces in "cm,hdr,sdrbrightness,1.2,sdrsaturation,0.98"
-    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1,bitdepth,10,cm,hdr,sdrbrightness,1.2,sdrsaturation,0.98" > /home/steam/.config/hypr/monitor.conf
-else
-    echo "monitor=,${WIDTH}x${HEIGHT}@${REFRESH},auto,1" > /home/steam/.config/hypr/monitor.conf
-fi
+export SHW_WIDTH="$WIDTH"
+export SHW_HEIGHT="$HEIGHT"
+export SHW_REFRESH="$REFRESH"
+export SHW_HDR_ENABLED="$HDR_ENABLED"
 
-if [ -f "/usr/local/bin/scripts/hyprland.conf" ]; then
-    cp /usr/local/bin/scripts/hyprland.conf /home/steam/.config/hypr/hyprland.conf
+if [ -f "/usr/local/bin/scripts/hyprland.lua" ]; then
+    cp /usr/local/bin/scripts/hyprland.lua /home/steam/.config/hypr/hyprland.lua
 fi
 
 # --- 6. Execute Hyprland ---
-exec start-hyprland -c /home/steam/.config/hypr/hyprland.conf
+exec start-hyprland -c /home/steam/.config/hypr/hyprland.lua
