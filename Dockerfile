@@ -105,6 +105,9 @@ ENV XDG_RUNTIME_DIR=/run/user/1000 \
     QT_QPA_PLATFORM=wayland
   #  NVIDIA_VISIBLE_DEVICES=all \
   #  NVIDIA_DRIVER_CAPABILITIES=all
+  
 USER root
+
 WORKDIR /home/steam
+
 ENTRYPOINT ["/entrypoint.sh"]
