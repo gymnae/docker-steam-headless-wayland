@@ -37,14 +37,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - 
-        name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('**/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
       -
         name: Build and push
         uses: docker/build-push-action@v4
@@ -55,6 +47,14 @@ jobs:
           tags: gymnae/steam-headless:latest
           cache-from: type=gha
           cache-to: type=gha,modex=max
+      - 
+        name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
           
   workflow-keepalive:
     if: github.event_name == 'schedule'
