@@ -3,14 +3,27 @@ set -e
 
 echo "--- [Audio] Initializing Audio Stack (High Priority / Nice) ---"
 
-# Tuned latency for 4K/60fps stability
-export PIPEWIRE_LATENCY="512/48000"
-export PIPEWIRE_QUANTUM="512/48000"
-export PIPEWIRE_MIN_QUANTUM="256/48000"
-export PIPEWIRE_MAX_QUANTUM="1024/48000"
-export PIPEWIRE_RATE="48000"
-export PIPEWIRE_RESAMPLE_QUALITY="4"
-export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
+# Low latency: 256 frames @ 48 kHz = ~5.3ms per cycle (raise to 512 if audio crackles).
+# Written as config drop-ins: env vars don't survive 'su - steam' (login shell resets env).
+# 48 kHz fixed = Opus native rate, no resampling between games and Sunshine.
+mkdir -p /etc/pipewire/pipewire.conf.d /etc/pipewire/pipewire-pulse.conf.d
+cat > /etc/pipewire/pipewire.conf.d/10-sunshine.conf <<EOF
+context.properties = {
+    default.clock.rate          = 48000
+    default.clock.allowed-rates = [ 48000 ]
+    default.clock.quantum       = 256
+    default.clock.min-quantum   = 256
+    default.clock.max-quantum   = 1024
+}
+EOF
+cat > /etc/pipewire/pipewire-pulse.conf.d/10-sunshine.conf <<EOF
+pulse.properties = {
+    pulse.min.req          = 256/48000
+    pulse.default.req      = 256/48000
+    pulse.min.quantum      = 256/48000
+    pulse.default.format   = F32
+}
+EOF
 
 # Cleanup
 rm -rf $XDG_RUNTIME_DIR/pipewire-* $XDG_RUNTIME_DIR/pulse

@@ -3,6 +3,9 @@ FROM cachyos/cachyos-v3:latest
 
 RUN printf "\n[lizardbyte-beta]\nSigLevel = Optional\nServer = https://github.com/LizardByte/pacman-repo/releases/download/beta\n" >> /etc/pacman.conf
 
+# Skip docs, man pages and unused translations (keeps en/de) on every package install
+RUN sed -i '/^\[options\]/a NoExtract = usr/share/doc/* usr/share/man/* usr/share/info/* usr/share/gtk-doc/* usr/share/help/*\nNoExtract = usr/share/locale/* !usr/share/locale/en* !usr/share/locale/de* !usr/share/locale/locale.alias' /etc/pacman.conf
+
 # 1. Install Core & Universal Gaming Packages
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
@@ -53,7 +56,8 @@ RUN pacman -Syu --noconfirm && \
     seatd \
     libinput \
     libinput-tools \
-    && pacman -Scc --noconfirm
+    # 'pacman -Scc --noconfirm' answers "No" to the cache prompt, so delete explicitly
+    && rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/*
 
 # 2. Install Game Device Rules
 RUN git clone https://codeberg.org/fabiscafe/game-devices-udev.git /tmp/gdu && \

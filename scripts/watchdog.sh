@@ -21,10 +21,11 @@ while true; do
     chmod 666 /dev/uhid 2>/dev/null || true
     
     # 3. Audio Keep-Alive
-    # If the default sink drifts (e.g. pipewire restarts), force it back to Sunshine
+    # If the default sink drifts (e.g. pipewire restarts), force it back to Sunshine.
+    # Match any Sunshine sink so its own 5.1/7.1 sinks (sink-sunshine-surround*) aren't overridden.
     CURRENT_SINK=$(su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && pactl get-default-sink 2>/dev/null" || true)
-    
-    if [[ "$CURRENT_SINK" != *"sunshine-stereo"* ]]; then
+
+    if [[ "$CURRENT_SINK" != *"sunshine"* ]]; then
         su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && pactl set-default-sink sunshine-stereo 2>/dev/null" || true
     fi
     

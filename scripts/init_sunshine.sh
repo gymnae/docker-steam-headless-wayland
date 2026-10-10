@@ -85,9 +85,16 @@ cat > "$CONF_FILE" <<EOF
 address = 0.0.0.0
 upnp = disabled
 gamepad = auto
+# Headless: no tray/notification host. Newer Sunshine runs the tray loop on the
+# main thread and exits when tray init fails, so it must be disabled.
+system_tray = disabled
 [video]
 capture = kms
 encoder = nvenc
+# P3: better quality than the default P1 for ~1-2ms extra encode time
+nvenc_preset = 3
+# Better flat areas/gradients at low bitrates, small encode cost
+nvenc_spatial_aq = enabled
 EOF
 chown steam:steam "$CONF_FILE"
 

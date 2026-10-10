@@ -59,6 +59,8 @@ fi
 
 # 8. PAM LIMITS FIX
 echo "Applying PAM Limits for steam user..."
+# Guarded: the container filesystem persists across restarts, so don't append twice
+if ! grep -q "^steam .*rtprio" /etc/security/limits.conf; then
 cat >> /etc/security/limits.conf <<EOF
 steam    soft    rtprio    99
 steam    hard    rtprio    99
@@ -68,3 +70,4 @@ steam    soft    nice      -20
 steam    hard    nice      -20
 EOF
 echo "session required pam_limits.so" >> /etc/pam.d/su
+fi
