@@ -37,6 +37,9 @@ fi
 
 echo "[$(date)] Request: ${REQ_WIDTH}x${REQ_HEIGHT} @ ${REQ_REFRESH} (HDR: $REQ_HDR)" >> $LOGfile
 
+# The display is off while nobody streams (see stream_power.sh)
+/usr/local/bin/scripts/stream_power.sh wake
+
 # CHECK: Only restart if config changed OR if Hyprland is currently dead
 if [ "$REQ_WIDTH" != "$CUR_WIDTH" ] || \
    [ "$REQ_HEIGHT" != "$CUR_HEIGHT" ] || \
@@ -76,21 +79,14 @@ fi
 EOF
 chmod +x "$SWITCH_SCRIPT"
 
-# 1.5 Power-Saving Shutdown Script
+# 1.5 Power-Saving Script, runs when the stream is quit or the idle timer fires
 STOP_SCRIPT="/usr/local/bin/stop_stream.sh"
 cat > "$STOP_SCRIPT" <<'EOF'
 #!/bin/bash
-echo "[$(date)] Moonlight disconnected. Shutting down Wayland and Steam..." >> /tmp/sunshine_switch.log
-
-# Gracefully ask Steam to exit first to prevent save data/cloud sync corruption
-killall -15 steam || true
-killall -15 steamwebhelper || true
-
-# Give Steam 3 seconds to sync cloud saves
-sleep 3
-
-# Kill the compositor, which releases the Nvidia GPU
-killall -15 Hyprland || true
+echo "[$(date)] Stream ended." >> /tmp/sunshine_switch.log
+# Keep Hyprland and Steam running so Steam can still download updates;
+# only close games and turn the display off so the GPU idles
+exec /usr/local/bin/scripts/stream_power.sh low
 EOF
 chmod +x "$STOP_SCRIPT"
 
@@ -126,6 +122,7 @@ cat > "$APPS_FILE" <<EOF
         {
             "name": "Steam Gaming",
             "output": "sunshine.log",
+            "cmd": "/usr/bin/python3 /usr/local/bin/scripts/idle_watch.py ${STREAM_IDLE_MINUTES:-30}",
             "prep-cmd": [
                 {
                     "do": "$SWITCH_SCRIPT",

@@ -118,9 +118,10 @@ lxc.cgroup2.devices.allow: c 510:* rwm
 lxc.cgroup2.devices.allow: c 10:* rwm
 # mice, keyboard etc
 lxc.cgroup2.devices.allow: c 13:* rwm
-# hidraw, needed by Steam Input for the emulated DualSense
-# the major number is dynamic, look it up on the host: grep hidraw /proc/devices
-lxc.cgroup2.devices.allow: c 239:* rwm
+# hidraw (needed by Steam Input for the emulated DualSense), nvidia-uvm and nvidia-caps get
+# dynamic major numbers that can change after a kernel update, so allow all character devices.
+# A privileged, unconfined LXC gains no real protection from a narrower list anyway.
+lxc.cgroup2.devices.allow: c *:* rwm
 # nvidia-caps
 lxc.cgroup2.devices.allow: c 235:* rwm
 # dev/dri

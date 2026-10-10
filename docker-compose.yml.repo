@@ -58,6 +58,7 @@ services:
       - LANG=de_DE.UTF-8             
       - KEYBOARD_LAYOUT=de          # XKB layout code (de, us, fr, etc.) 
       - TZ=Europe/Berlin
+      #- STREAM_IDLE_MINUTES=30      # End the stream after this long without input (0 = never)
       #- SUNSHINE_GAMEPAD=ds5         # Emulated pad: ds5 (default, gyro/touchpad), xone, switch, auto
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
