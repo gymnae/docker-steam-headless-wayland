@@ -6,6 +6,22 @@ echo "--- [Watchdog] Started ---"
 LAST_COUNT=0
 export XDG_RUNTIME_DIR=/run/user/1000
 
+# Fallback for the udev rule: mirror the host's hidraw devices into the container's /dev
+sync_hidraw() {
+    for sys in /sys/class/hidraw/hidraw*; do
+        [ -e "$sys/dev" ] || continue
+        node="/dev/${sys##*/}"
+        IFS=: read -r maj min < "$sys/dev"
+        if [ ! -c "$node" ] || [ "$(stat -c '%t:%T' "$node")" != "$(printf '%x:%x' "$maj" "$min")" ]; then
+            rm -f "$node"
+            mknod -m 0666 "$node" c "$maj" "$min"
+        fi
+    done
+    for node in /dev/hidraw*; do
+        [ -e "/sys/class/hidraw/${node##*/}" ] || rm -f "$node"
+    done
+}
+
 while true; do
     # 1. Hotplug Detection (Input Devices)
     NEW_COUNT=$(ls -1 /dev/input | wc -l)
@@ -14,6 +30,8 @@ while true; do
         LAST_COUNT=$NEW_COUNT
     fi
     
+    sync_hidraw
+
     # 2. Enforce Permissions (Crucial for hotplugged controllers)
     chmod 666 /dev/input/event* 2>/dev/null || true
     chmod 666 /dev/input/js* 2>/dev/null || true

@@ -39,6 +39,15 @@ su - steam -c "dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --fork 
 sleep 1
 
 # 5. Udev
+# Sunshine creates its virtual pads when a client connects. Open them up right away instead of
+# waiting for the watchdog, otherwise Steam can enumerate a pad it cannot open and ignore it.
+cat > /etc/udev/rules.d/99-steam-headless-input.rules <<'EOF'
+SUBSYSTEM=="input", KERNEL=="event*|js*", MODE="0666"
+KERNEL=="uinput|uhid", MODE="0666"
+# /dev is a container tmpfs, so hidraw nodes of new pads (Steam Input needs them for the DualSense) must be created by hand
+SUBSYSTEM=="hidraw", ACTION=="add", RUN+="/bin/sh -c 'rm -f /dev/%k; mknod -m 0666 /dev/%k c %M %m'"
+SUBSYSTEM=="hidraw", ACTION=="remove", RUN+="/bin/rm -f /dev/%k"
+EOF
 if [ -x /usr/lib/systemd/systemd-udevd ]; then 
     echo "Starting udevd..."
     /usr/lib/systemd/systemd-udevd --daemon

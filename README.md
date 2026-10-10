@@ -118,6 +118,9 @@ lxc.cgroup2.devices.allow: c 510:* rwm
 lxc.cgroup2.devices.allow: c 10:* rwm
 # mice, keyboard etc
 lxc.cgroup2.devices.allow: c 13:* rwm
+# hidraw, needed by Steam Input for the emulated DualSense
+# the major number is dynamic, look it up on the host: grep hidraw /proc/devices
+lxc.cgroup2.devices.allow: c 239:* rwm
 # nvidia-caps
 lxc.cgroup2.devices.allow: c 235:* rwm
 # dev/dri

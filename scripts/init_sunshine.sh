@@ -99,7 +99,12 @@ cat > "$CONF_FILE" <<EOF
 [general]
 address = 0.0.0.0
 upnp = disabled
-gamepad = auto
+# Emulate a DualSense: unlike the Xbox pad it carries gyro, touchpad and rumble, and Steam
+# treats it as a full Steam Input controller. "auto" falls back to Xbox whenever the client
+# reports an Xbox-style pad, e.g. a Steam Deck with Steam Input enabled for Moonlight.
+gamepad = ${SUNSHINE_GAMEPAD:-ds5}
+# Keep the pad's MAC stable across sessions so Steam recognizes it and keeps its layouts
+ds5_inputtino_randomize_mac = disabled
 # Headless: no tray/notification host. Newer Sunshine runs the tray loop on the
 # main thread and exits when tray init fails, so it must be disabled.
 system_tray = disabled
