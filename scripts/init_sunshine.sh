@@ -44,15 +44,30 @@ if [ "$REQ_WIDTH" != "$CUR_WIDTH" ] || \
    [ "$REQ_HDR" != "$CUR_HDR" ] || \
    ! pgrep -x "Hyprland" > /dev/null; then
 
-    echo "    -> Change detected or session dead! Triggering start." >> $LOGfile
-    
     echo "WIDTH=$REQ_WIDTH" > "$CONFIG_FILE"
     echo "HEIGHT=$REQ_HEIGHT" >> "$CONFIG_FILE"
     echo "REFRESH=$REQ_REFRESH" >> "$CONFIG_FILE"
     echo "HDR_ENABLED=$REQ_HDR" >> "$CONFIG_FILE"
 
     chown steam:steam "$CONFIG_FILE"
-    
+
+    # Live mode switch: a session restart also kills Sunshine, which drops the
+    # client that just connected. Only HDR toggles still need a full restart.
+    if [ "$REQ_HDR" = "$CUR_HDR" ] && pgrep -x "Hyprland" > /dev/null; then
+        HYPRCTL="runuser -u steam -- env XDG_RUNTIME_DIR=/run/user/1000 hyprctl -i 0"
+        MODE="${REQ_WIDTH}x${REQ_HEIGHT}@${REQ_REFRESH}"
+        echo "    -> Switching live to $MODE" >> $LOGfile
+        $HYPRCTL eval "hl.monitor({ output = \"\", mode = \"$MODE\", position = \"auto\", scale = \"1\" })" >> $LOGfile 2>&1
+        sleep 1
+        # Refresh is not checked: the dummy plug's EDID may not offer it, and Hyprland picks the nearest
+        if $HYPRCTL monitors 2>/dev/null | grep -q "^[[:space:]]*${REQ_WIDTH}x${REQ_HEIGHT}@"; then
+            echo "    -> Live switch OK: $($HYPRCTL monitors | grep -o '[0-9]*x[0-9]*@[0-9.]*' | head -n1)" >> $LOGfile
+            exit 0
+        fi
+        echo "    -> Live switch failed, falling back to session restart." >> $LOGfile
+    fi
+
+    echo "    -> Change detected or session dead! Triggering start." >> $LOGfile
     # Touch the file to signal the supervisor/entrypoint to execute Script 2
     touch "$TRIGGER_FILE"
 else
