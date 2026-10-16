@@ -37,7 +37,7 @@ fi
 
 echo "[$(date)] Request: ${REQ_WIDTH}x${REQ_HEIGHT} @ ${REQ_REFRESH} (HDR: $REQ_HDR)" >> $LOGfile
 
-# The display is off while nobody streams (see stream_power.sh)
+# The display runs a tiny mode while nobody streams (see stream_power.sh)
 /usr/local/bin/scripts/stream_power.sh wake
 
 # CHECK: Only restart if config changed OR if Hyprland is currently dead
@@ -85,7 +85,7 @@ cat > "$STOP_SCRIPT" <<'EOF'
 #!/bin/bash
 echo "[$(date)] Stream ended." >> /tmp/sunshine_switch.log
 # Keep Hyprland and Steam running so Steam can still download updates;
-# only close games and turn the display off so the GPU idles
+# only close games and drop the display to a tiny mode so the GPU idles
 exec /usr/local/bin/scripts/stream_power.sh low
 EOF
 chmod +x "$STOP_SCRIPT"

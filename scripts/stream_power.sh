@@ -1,11 +1,16 @@
 #!/bin/bash
 # Power state of the session while nobody is streaming.
-#   low  - close running games and turn the display off. Hyprland and Steam keep running,
-#          so Steam still downloads updates, but the GPU idles.
-#   wake - turn the display back on before a stream starts.
+#   low  - close running games and drop the display to a tiny mode. Hyprland and Steam keep
+#          running, so Steam still downloads updates, but the GPU idles.
+#   wake - restore the session's mode before a stream starts.
 #   boot - go low after startup unless a stream started in the meantime.
+#
+# The display is never turned off (DPMS): with the CRTC off, KMS capture finds no monitor,
+# and Sunshine probes the display on connect before the app's prep-cmd can wake it.
 
 LOG=/tmp/sunshine_switch.log
+CONFIG_FILE="/home/steam/.config/display_config"
+LOW_MODE="${STREAM_LOW_POWER_MODE:-640x480@30}"
 HYPRCTL="runuser -u steam -- env XDG_RUNTIME_DIR=/run/user/1000 hyprctl -i 0"
 
 descendants() {
@@ -33,19 +38,28 @@ close_games() {
     kill -KILL $pids 2>/dev/null
 }
 
-set_dpms() {
+# Hyprland picks the nearest mode when the dummy plug's EDID doesn't offer this one
+set_mode() {
     pgrep -x Hyprland > /dev/null || return 0
-    $HYPRCTL eval "hl.dispatch(hl.dsp.dpms({ action = \"$1\" }))" >> $LOG 2>&1
+    $HYPRCTL eval "hl.monitor({ output = \"\", mode = \"$1\", position = \"auto\", scale = \"1\"$2 })" >> $LOG 2>&1
+}
+
+restore_mode() {
+    local WIDTH=1920 HEIGHT=1080 REFRESH=60 HDR_ENABLED=false extra=""
+    [ -f "$CONFIG_FILE" ] && source "$CONFIG_FILE"
+    # Same HDR settings as hyprland.lua
+    [ "$HDR_ENABLED" = "true" ] && extra=", bitdepth = 10, cm = \"hdr\", sdrbrightness = 1.2, sdrsaturation = 0.98"
+    set_mode "${WIDTH}x${HEIGHT}@${REFRESH}" "$extra"
 }
 
 case "$1" in
     low)
         echo "[$(date)] Entering low-power mode (Steam keeps running)" >> $LOG
         close_games
-        set_dpms off
+        set_mode "$LOW_MODE"
         ;;
     wake)
-        set_dpms on
+        restore_mode
         # Give the CRTC a frame before Sunshine starts capturing
         sleep 1
         ;;

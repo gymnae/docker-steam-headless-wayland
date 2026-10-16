@@ -140,7 +140,7 @@ while true; do
         sunshine &
         SUNSHINE_PID=$!
 
-        # Turn the display off until someone connects
+        # Drop the display to a tiny mode until someone connects
         /usr/local/bin/scripts/stream_power.sh boot &
     else
         echo "    [Supervisor] ERROR: Wayland socket failed to appear!"
