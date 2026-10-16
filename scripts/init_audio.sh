@@ -11,16 +11,16 @@ cat > /etc/pipewire/pipewire.conf.d/10-sunshine.conf <<EOF
 context.properties = {
     default.clock.rate          = 48000
     default.clock.allowed-rates = [ 48000 ]
-    default.clock.quantum       = 256
-    default.clock.min-quantum   = 256
+    default.clock.quantum       = 512
+    default.clock.min-quantum   = 512
     default.clock.max-quantum   = 1024
 }
 EOF
 cat > /etc/pipewire/pipewire-pulse.conf.d/10-sunshine.conf <<EOF
 pulse.properties = {
-    pulse.min.req          = 256/48000
-    pulse.default.req      = 256/48000
-    pulse.min.quantum      = 256/48000
+    pulse.min.req          = 512/48000
+    pulse.default.req      = 512/48000
+    pulse.min.quantum      = 512/48000
     pulse.default.format   = F32
 }
 EOF
