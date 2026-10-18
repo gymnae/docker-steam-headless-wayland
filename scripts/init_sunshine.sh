@@ -95,10 +95,13 @@ cat > "$CONF_FILE" <<EOF
 [general]
 address = 0.0.0.0
 upnp = disabled
-# Emulate a DualSense: unlike the Xbox pad it carries gyro, touchpad and rumble, and Steam
-# treats it as a full Steam Input controller. "auto" falls back to Xbox whenever the client
-# reports an Xbox-style pad, e.g. a Steam Deck with Steam Input enabled for Moonlight.
-gamepad = ${SUNSHINE_GAMEPAD:-ds5}
+# Emulate the pad the client reports, so games show matching glyphs and rumble works on both:
+# a DualSense on a PC client becomes a DualSense, a Steam Deck (Xbox-style pad) becomes an Xbox pad.
+gamepad = ${SUNSHINE_GAMEPAD:-auto}
+# By default "auto" also turns any pad with gyro or a touchpad into a DualSense, which gives the
+# Steam Deck PlayStation glyphs. Decide by the reported type only.
+motion_as_ds4 = disabled
+touchpad_as_ds4 = disabled
 # Keep the pad's MAC stable across sessions so Steam recognizes it and keeps its layouts
 ds5_inputtino_randomize_mac = disabled
 # Headless: no tray/notification host. Newer Sunshine runs the tray loop on the
