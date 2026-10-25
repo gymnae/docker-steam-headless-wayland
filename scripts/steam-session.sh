@@ -5,7 +5,7 @@ set -e
 unset WAYLAND_DISPLAY
 unset DISPLAY
 unset GDK_BACKEND
-unset QT_QPA_PLATFOR
+unset QT_QPA_PLATFORM
 
 export HOME=/home/steam
 # --- 1. Load Configuration ---
@@ -43,6 +43,8 @@ fi
 
 # --- 3. Environment Variables ---
 export XDG_RUNTIME_DIR=/run/user/1000
+# Session bus started by init_system.sh; its export there doesn't reach this process
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
 export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=Hyprland
 

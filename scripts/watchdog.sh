@@ -46,6 +46,18 @@ while true; do
     if [[ "$CURRENT_SINK" != *"sunshine"* ]]; then
         su - steam -c "export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR && pactl set-default-sink sunshine-stereo 2>/dev/null" || true
     fi
-    
+
+    # 4. Audio Re-Route
+    # Proton binds its audio device once at startup. A game (or its launcher) that opened audio while
+    # the boot sink was default keeps playing into it after Sunshine switches to its own sink,
+    # so Sunshine records silence. Move every stream onto the current default sink.
+    runuser -u steam -- env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR bash -c '
+        DEFAULT_ID=$(pactl list sinks short 2>/dev/null | awk -v n="$(pactl get-default-sink 2>/dev/null)" "\$2 == n {print \$1}")
+        [ -n "$DEFAULT_ID" ] || exit 0
+        pactl list sink-inputs short 2>/dev/null | awk -v s="$DEFAULT_ID" "\$2 != s {print \$1}" | while read -r input; do
+            pactl move-sink-input "$input" "$DEFAULT_ID" 2>/dev/null && echo "--- [Watchdog] Moved audio stream $input to default sink"
+        done
+    ' || true
+
     sleep 5
 done

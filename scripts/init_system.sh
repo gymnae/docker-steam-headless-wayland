@@ -59,6 +59,15 @@ fi
 chmod 666 /dev/uinput /dev/input/event* /dev/dri/card* /dev/dri/renderD* /dev/nvidia* 2>/dev/null || true
 chown root:video /dev/input/event* 2>/dev/null || true
 
+# 6.5 Memory Map Limit
+# Large Proton games (e.g. Baldur's Gate 3) can crash at the kernel default of 65530 mappings.
+# SteamOS and Arch use 1048576+. Not namespaced: this raises it on the host (until reboot).
+if [ "$(cat /proc/sys/vm/max_map_count 2>/dev/null || echo 0)" -lt 1048576 ]; then
+    sysctl -w vm.max_map_count=1048576 >/dev/null 2>&1 \
+        && echo "Raised vm.max_map_count to 1048576." \
+        || echo "[Warn] Could not raise vm.max_map_count (set it on the host)."
+fi
+
 # 7. Localization
 if [ -n "$GENERATE_LOCALE" ]; then
     sed -i "s/# $GENERATE_LOCALE/$GENERATE_LOCALE/" /etc/locale.gen
