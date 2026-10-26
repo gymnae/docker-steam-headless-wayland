@@ -33,10 +33,10 @@ while true; do
     sync_hidraw
 
     # 2. Enforce Permissions (Crucial for hotplugged controllers)
-    chmod 666 /dev/input/event* 2>/dev/null || true
-    chmod 666 /dev/input/js* 2>/dev/null || true
-    chmod 666 /dev/hidraw* 2>/dev/null || true
-    chmod 666 /dev/uhid 2>/dev/null || true
+    # Only touch nodes that need it: Proton watches /dev with inotify, and a blanket chmod every
+    # tick makes every running game re-enumerate all controllers every 5 seconds.
+    find /dev/input /dev -maxdepth 1 -type c \( -name 'event*' -o -name 'js*' -o -name 'hidraw*' -o -name 'uhid' \) \
+        ! -perm 0666 -exec chmod 666 {} + 2>/dev/null || true
     
     # 3. Audio Keep-Alive
     # If the default sink drifts (e.g. pipewire restarts), force it back to Sunshine.
