@@ -58,6 +58,20 @@ export XDG_SEAT=seat0
 #export DXVK_ENABLE_NVAPI=1
 #export AQ_NO_MODIFIERS=1
 
+# CPU Pinning Fix: with the container pinned to e.g. host CPUs 8-11, Wine hands games an affinity
+# mask that doesn't start at CPU 0. Games that pin threads to the first N cores (Baldur's Gate 3's
+# Wwise audio thread) then get no sound or crash on start. Present the allowed CPUs as 0..N-1.
+CPU_LIST=$(awk '/^Cpus_allowed_list:/ {print $2}' /proc/self/status)
+ALLOWED_CPUS=()
+IFS=, read -ra CPU_RANGES <<< "$CPU_LIST"
+for range in "${CPU_RANGES[@]}"; do
+    ALLOWED_CPUS+=($(seq "${range%-*}" "${range#*-}"))
+done
+if [ ${#ALLOWED_CPUS[@]} -gt 0 ] && [ "${ALLOWED_CPUS[*]}" != "$(seq -s ' ' 0 $((${#ALLOWED_CPUS[@]} - 1)))" ]; then
+    export WINE_CPU_TOPOLOGY="${#ALLOWED_CPUS[@]}:$(IFS=,; echo "${ALLOWED_CPUS[*]}")"
+    echo "    CPU Pinning Fix: WINE_CPU_TOPOLOGY=$WINE_CPU_TOPOLOGY"
+fi
+
 # --- 3. Controller Mappings (Inline) ---
 export SDL_GAMECONTROLLERCONFIG="050000004c050000e60c000011810000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
 050000004c050000e60c000000000000,PS5 Controller,a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2,platform:Linux,
