@@ -61,5 +61,6 @@ services:
       #- STREAM_IDLE_MINUTES=30      # End the stream after this long without input (0 = never)
       #- STREAM_LOW_POWER_MODE=640x480@30  # Display mode while nobody streams
       #- SUNSHINE_GAMEPAD=auto        # Emulated pad: auto (default, matches the client), ds5, xone, switch
+      #- SUNSHINE_LOG_LEVEL=info      # Sunshine log level: verbose, debug, info, warning, error
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all

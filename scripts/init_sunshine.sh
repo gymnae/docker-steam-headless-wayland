@@ -102,11 +102,15 @@ gamepad = ${SUNSHINE_GAMEPAD:-auto}
 # Steam Deck PlayStation glyphs. Decide by the reported type only.
 motion_as_ds4 = disabled
 touchpad_as_ds4 = disabled
-# Keep the pad's MAC stable across sessions so Steam recognizes it and keeps its layouts
+# Keep the pad's MAC stable across sessions so Steam recognizes it and keeps its layouts.
+# Renamed when Sunshine replaced inputtino with libvirtualhid; keep both for older builds.
+virtualhid_randomize_mac = disabled
 ds5_inputtino_randomize_mac = disabled
 # Headless: no tray/notification host. Newer Sunshine runs the tray loop on the
 # main thread and exits when tray init fails, so it must be disabled.
 system_tray = disabled
+# debug also logs each controller's arrival packet (client-reported type and capabilities)
+min_log_level = ${SUNSHINE_LOG_LEVEL:-info}
 [video]
 capture = kms
 encoder = nvenc
@@ -118,6 +122,10 @@ EOF
 chown steam:steam "$CONF_FILE"
 
 # 3. Apps
+# exit-timeout 0: kill the idle watcher at once on quit. During a graceful wait, Sunshine's stream
+# thread also sees the app gone and runs terminate() concurrently. That runs the undo command
+# twice and leaves Sunshine's prep-cmd iterator out of range, so every later launch throws
+# ("Property tree is empty") until Sunshine is restarted.
 cat > "$APPS_FILE" <<EOF
 {
     "env": { "PATH": "$PATH" },
@@ -126,6 +134,7 @@ cat > "$APPS_FILE" <<EOF
             "name": "Steam Gaming",
             "output": "sunshine.log",
             "cmd": "/usr/bin/python3 /usr/local/bin/scripts/idle_watch.py ${STREAM_IDLE_MINUTES:-30}",
+            "exit-timeout": 0,
             "prep-cmd": [
                 {
                     "do": "$SWITCH_SCRIPT",
