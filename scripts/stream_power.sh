@@ -11,6 +11,8 @@
 LOG=/tmp/sunshine_switch.log
 CONFIG_FILE="/home/steam/.config/display_config"
 LOW_MODE="${STREAM_LOW_POWER_MODE:-640x480@30}"
+# Set from wake until low, so boot doesn't drop the display under a stream that is starting
+ACTIVE_FILE=/tmp/stream_active
 HYPRCTL="runuser -u steam -- env XDG_RUNTIME_DIR=/run/user/1000 hyprctl -i 0"
 
 descendants() {
@@ -54,20 +56,29 @@ restore_mode() {
 
 case "$1" in
     low)
+        rm -f "$ACTIVE_FILE"
         echo "[$(date)] Entering low-power mode (Steam keeps running)" >> $LOG
         close_games
         set_mode "$LOW_MODE"
         ;;
     wake)
+        touch "$ACTIVE_FILE"
+        was_low=false
+        $HYPRCTL monitors 2>/dev/null | grep -q "^[[:space:]]*${LOW_MODE%@*}@" && was_low=true
         restore_mode
+        # Big Picture sometimes stays black after the mode change back; Steam relaunches its
+        # browser on its own, which redraws the UI at the restored size
+        if $was_low && pgrep -f steamwebhelper > /dev/null; then
+            echo "    -> Restarting Steam's browser to redraw Big Picture" >> $LOG
+            pkill -f steamwebhelper
+        fi
         # Give the CRTC a frame before Sunshine starts capturing
         sleep 1
         ;;
     boot)
         # Sunshine probes the display at startup, so leave it on until that is done.
-        # The idle watcher is the app's command, so it only runs while a stream is active.
         sleep 60
-        pgrep -f idle_watch.py > /dev/null || "$0" low
+        [ -e "$ACTIVE_FILE" ] || "$0" low
         ;;
     *)
         echo "Usage: $0 low|wake|boot" >&2

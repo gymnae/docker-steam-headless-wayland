@@ -11,7 +11,7 @@ killall -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rt
 sleep 2 
 # Force kill only the stubborn remnants:
 killall -s 9 -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon hyprland || true
-rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart 2>/dev/null
+rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart /tmp/stream_active 2>/dev/null
 
 # --- 1. RUNTIME ENV ---
 export SEATD_VTBOUND=0
