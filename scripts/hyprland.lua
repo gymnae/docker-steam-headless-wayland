@@ -54,15 +54,28 @@ hl.config({
     },
 })
 
+-- Steam's on-screen keyboard types into the focused window through XTest, so it must never take
+-- focus itself. Steam hides it by moving it, not by closing it, so Hyprland must not place it either.
 hl.window_rule({
-    name = "steam-keyboard-focus",
+    name = "steam-keyboard",
     match = {
         title = "^(Steam Keyboard)$",
     },
     float = true,
-    center = true,
-    stay_focused = true,
+    no_initial_focus = true,
     pin = true,
+})
+
+-- Big Picture stays open, tiled behind the fullscreen game. When the in-game keyboard or overlay
+-- is used, Steam activates that window; with misc.focus_on_activate it then takes keyboard focus
+-- from the game, so clicks and keyboard text end up in Steam instead of the game.
+hl.window_rule({
+    name = "steam-no-focus-steal",
+    match = {
+        class = "^(steam)$",
+        title = "^(Steam Big Picture Mode)$",
+    },
+    focus_on_activate = false,
 })
 
 hl.window_rule({
