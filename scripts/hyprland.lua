@@ -23,6 +23,7 @@ hl.monitor(monitorRule)
 
 hl.on("hyprland.start", function()
     hl.exec_cmd([[bash -c 'while true; do steam -gamepadui -noverifyfiles -fulldesktopres; sleep 2; pkill -9 -u steam -f "steamwebhelper|steam-runtime"; killall -9 steam steam-runtime-supervisor 2>/dev/null; rm -f /home/steam/.steam/steam.pid /home/steam/.steam/steam.pipe; sleep 2; done']])
+    hl.exec_cmd("/usr/local/bin/scripts/steam_guard.sh")
 end)
 
 hl.config({
