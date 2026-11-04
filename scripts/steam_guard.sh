@@ -10,7 +10,7 @@ INTERVAL=2
 
 # The client binary itself; /usr/bin/steam and steam.sh are only wrappers around it
 steam_pid() {
-    pgrep -u steam -f 'ubuntu12_32/steam( |$)' | head -n1
+    pgrep -u steam -f 'ubuntu12_(32|64)/steam( |$)' | head -n1
 }
 
 has_window() {
