@@ -5,6 +5,12 @@
 # Here Steam is shut down instead; that loop then clears its leftovers and starts Big Picture again.
 # Runs inside Hyprland as the steam user (started from hyprland.lua).
 
+# A Hyprland restart starts a new copy of this script; stop copies left from earlier sessions,
+# or several loops kill each other's Steam and Steam never finishes starting
+for pid in $(pgrep -u "$(id -u)" -f 'scripts/steam_guard\.sh$'); do
+    [ "$pid" != "$$" ] && kill "$pid" 2>/dev/null
+done
+
 GRACE=6        # seconds without a window before the restart
 INTERVAL=2
 

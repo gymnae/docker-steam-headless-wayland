@@ -7,10 +7,10 @@ ulimit -c 0
 # --- 0. BOOT CLEANUP ---
 echo "--- [Boot] Cleaning up ---"
 # Polite ask:
-killall -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon hyprland || true
+killall -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon start-hyprland Hyprland || true
 sleep 2 
 # Force kill only the stubborn remnants:
-killall -s 9 -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon hyprland || true
+killall -s 9 -q sunshine gamescope steam steamwebhelper seatd pipewire wireplumber rtkit-daemon start-hyprland Hyprland || true
 rm -rf /tmp/.X* /run/user/1000/* /run/seatd.sock /tmp/pulse-* /run/dbus/pid /tmp/trigger_restart /tmp/stream_active 2>/dev/null
 
 # --- 1. RUNTIME ENV ---
@@ -52,9 +52,11 @@ while true; do
     # ----------------------------------------
     rm -f /tmp/trigger_restart
     
-    killall -q sunshine gamescope steam steamwebhelper seatd hyprland || true
+    # Steam's restart loop and guard outlive Hyprland; stop them first so they don't restart Steam
+    pkill -f '/usr/local/bin/scripts/steam_(loop|guard)\.sh' || true
+    killall -q sunshine gamescope steam steamwebhelper seatd start-hyprland Hyprland || true
     sleep 2
-    killall -s 9 -q sunshine gamescope steam steamwebhelper seatd hyprland || true
+    killall -s 9 -q sunshine gamescope steam steamwebhelper seatd start-hyprland Hyprland || true
     
     # Socket Cleanup
     rm -rf /tmp/.X11-unix /tmp/.X0-lock /run/seatd.sock "$XDG_RUNTIME_DIR/gamescope-0" "$XDG_RUNTIME_DIR"/wayland-*
