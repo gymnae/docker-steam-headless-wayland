@@ -74,6 +74,9 @@ while true; do
     # Re-apply NVIDIA permissions after udevadm trigger wipes them!
     chmod 666 /dev/uinput /dev/dri/card* /dev/dri/renderD* /dev/input/event* /dev/nvidia* 2>/dev/null || true
 
+    # Warn if something outside the container holds the display (e.g. kmscon in the LXC)
+    /usr/local/bin/scripts/check_drm_master.sh || true
+
     # Start Seatd
     echo "    [Supervisor] Starting seatd..."
     seatd -g video &
