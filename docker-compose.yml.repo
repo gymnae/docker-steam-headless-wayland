@@ -62,5 +62,6 @@ services:
       #- STREAM_LOW_POWER_MODE=640x480@30  # Display mode while nobody streams
       #- SUNSHINE_GAMEPAD=auto        # Emulated pad: auto (default, matches the client), ds5, xone, switch
       #- SUNSHINE_LOG_LEVEL=info      # Sunshine log level: verbose, debug, info, warning, error
+      #- SUNSHINE_CSRF_ALLOWED_ORIGINS=https://sunshine.example.com  # Extra Web UI origins (comma-separated), added to the auto-detected https://<container-ip>:47990
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all

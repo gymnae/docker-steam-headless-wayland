@@ -129,10 +129,17 @@ while true; do
         # 3. Strip out any old CSRF rules to prevent duplication on reboot
         sed -i '/^csrf_allowed_origins/d' "$SUNSHINE_CONF"
         
-        # 4. Inject the current IP address
-        if [ -n "$LOCAL_IP" ]; then
-            echo "    [Supervisor] Whitelisting Sunshine Web UI for IP: $LOCAL_IP"
-            echo "csrf_allowed_origins = https://${LOCAL_IP}:47990" >> "$SUNSHINE_CONF"
+        # 4. Allow the auto-detected IP plus any extra origins from
+        #    SUNSHINE_CSRF_ALLOWED_ORIGINS (comma-separated, e.g. a reverse
+        #    proxy URL like https://sunshine.example.com)
+        CSRF_ORIGINS=""
+        [ -n "$LOCAL_IP" ] && CSRF_ORIGINS="https://${LOCAL_IP}:47990"
+        if [ -n "$SUNSHINE_CSRF_ALLOWED_ORIGINS" ]; then
+            CSRF_ORIGINS="${CSRF_ORIGINS:+$CSRF_ORIGINS,}$(echo "$SUNSHINE_CSRF_ALLOWED_ORIGINS" | tr -d ' ')"
+        fi
+        if [ -n "$CSRF_ORIGINS" ]; then
+            echo "    [Supervisor] Whitelisting Sunshine Web UI origins: $CSRF_ORIGINS"
+            echo "csrf_allowed_origins = ${CSRF_ORIGINS}" >> "$SUNSHINE_CONF"
         fi
         chown steam:steam "$SUNSHINE_CONF"
         
